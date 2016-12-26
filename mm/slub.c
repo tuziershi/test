@@ -2926,6 +2926,7 @@ static int init_kmem_cache_nodes(struct kmem_cache *s)
 		struct kmem_cache_node *n;
 
 		if (slab_state == DOWN) {
+			printk(KERN_INFO "call early_kmem_cache_node_alloc from init_kmem_cache_nodes:%s\n",s->name);
 			early_kmem_cache_node_alloc(node);
 			continue;
 		}

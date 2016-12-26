@@ -511,9 +511,12 @@ static __always_inline void *kmalloc_node(size_t size, gfp_t flags, int node)
 
 		if (!i)
 			return ZERO_SIZE_PTR;
-
-		return kmem_cache_alloc_node_trace(kmalloc_caches[i],
-						flags, node, size);
+		if(flags & __GFP_COME_FROM_FILESYSTEM)
+			return kmem_cache_alloc_node_trace(kmalloc_caches_files[i],
+							flags, node, size);
+		else
+			return kmem_cache_alloc_node_trace(kmalloc_caches[i],
+							flags, node, size);
 	}
 #endif
 	return __kmalloc_node(size, flags, node);
