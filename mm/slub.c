@@ -1397,7 +1397,10 @@ static struct page *new_slab(struct kmem_cache *s, gfp_t flags, int node)
 		flags & (GFP_RECLAIM_MASK | GFP_CONSTRAINT_MASK), node);
 	if (!page)
 		goto out;
-
+	else{
+		if(!memcmp(s->name,"dma-kmalloc-files",17)||!memcmp(s->name,"kmalloc-files",13))
+		printk(KERN_INFO "come from mm/slub.c/new_slab:need to modify pte!\n");
+	}
 	order = compound_order(page);
 	inc_slabs_node(s, page_to_nid(page), page->objects);
 	memcg_bind_pages(s, order);
@@ -2180,10 +2183,10 @@ static inline void *new_slab_objects(struct kmem_cache *s, gfp_t flags,
 
 	page = new_slab(s, flags, node);
 	if (page) {
-		if(flags&__GFP_COME_FROM_FILESYSTEM)
-		{
-			printk(KERN_INFO "come from slub.c:new slab_objects,need to modify pte\n");
-		}
+		//if(flags&__GFP_COME_FROM_FILESYSTEM)
+		//{
+		//	printk(KERN_INFO "come from slub.c:new slab_objects,need to modify pte\n");
+		//}
 		c = __this_cpu_ptr(s->cpu_slab);
 		if (c->page)
 			flush_slab(s, c);
