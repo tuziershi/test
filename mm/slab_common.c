@@ -524,29 +524,38 @@ void __init create_kmalloc_caches(unsigned long flags)
 	}
 
 	for (i = KMALLOC_SHIFT_LOW; i <= KMALLOC_SHIFT_HIGH; i++) {
+		if (!kmalloc_caches_files[i])
+                {
+                        new_kmalloc_cache_files(i,flags);
+                         printk(KERN_INFO "kmalloc_caches_files[%d]:%p",i,kmalloc_caches_files[i]);
+                }
 		if (!kmalloc_caches[i])
 		{
 			new_kmalloc_cache(i, flags);
                  	printk(KERN_INFO "kmalloc_caches[%d]:%p",i,kmalloc_caches[i]);
 		}
-		if (!kmalloc_caches_files[i])
-		{
-			new_kmalloc_cache_files(i,flags);
-			 printk(KERN_INFO "kmalloc_caches_files[%d]:%p",i,kmalloc_caches_files[i]);
-		}
+		//if (!kmalloc_caches_files[i])
+		//{
+		//	new_kmalloc_cache_files(i,flags);
+		//	 printk(KERN_INFO "kmalloc_caches_files[%d]:%p",i,kmalloc_caches_files[i]);
+		//}
 		/*
 		 * Caches that are not of the two-to-the-power-of size.
 		 * These have to be created immediately after the
 		 * earlier power of two caches
 		 */
-		if (KMALLOC_MIN_SIZE <= 32 && !kmalloc_caches[1] && i == 6)
-			new_kmalloc_cache(1, flags);
-		if (KMALLOC_MIN_SIZE <= 64 && !kmalloc_caches[2] && i == 7)
-			new_kmalloc_cache(2, flags);
 		if (KMALLOC_MIN_SIZE <= 32 && !kmalloc_caches_files[1] && i == 6)
                         new_kmalloc_cache_files(1, flags);
                 if (KMALLOC_MIN_SIZE <= 64 && !kmalloc_caches_files[2] && i == 7)
                         new_kmalloc_cache_files(2, flags);
+		if (KMALLOC_MIN_SIZE <= 32 && !kmalloc_caches[1] && i == 6)
+			new_kmalloc_cache(1, flags);
+		if (KMALLOC_MIN_SIZE <= 64 && !kmalloc_caches[2] && i == 7)
+			new_kmalloc_cache(2, flags);
+		//if (KMALLOC_MIN_SIZE <= 32 && !kmalloc_caches_files[1] && i == 6)
+                //        new_kmalloc_cache_files(1, flags);
+                //if (KMALLOC_MIN_SIZE <= 64 && !kmalloc_caches_files[2] && i == 7)
+                //        new_kmalloc_cache_files(2, flags);
 	}
 
 	/* Kmalloc array is now usable */
