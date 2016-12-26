@@ -452,7 +452,7 @@ static struct {
         {"kmalloc-files-4096",         4096},         {"kmalloc-files-8192",         8192},
         {"kmalloc-files-16384",       16384},         {"kmalloc-files-32768",       32768},
         {"kmalloc-files-65536",       65536},         {"kmalloc-files-131072",     131072},
-        {"kmalloc-files-262144",     262144},         {"kmalloc-files524288",     524288},
+        {"kmalloc-files-262144",     262144},         {"kmalloc-files-524288",     524288},
         {"kmalloc-files-1048576",   1048576},         {"kmalloc-files-2097152",   2097152},
         {"kmalloc-files-4194304",   4194304},         {"kmalloc-files-8388608",   8388608},
         {"kmalloc-files-16777216", 16777216},         {"kmalloc-files-33554432", 33554432},

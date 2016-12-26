@@ -1399,7 +1399,7 @@ static struct page *new_slab(struct kmem_cache *s, gfp_t flags, int node)
 		goto out;
 	else{
 		if(!memcmp(s->name,"dma-kmalloc-files",17)||!memcmp(s->name,"kmalloc-files",13))
-		printk(KERN_INFO "come from mm/slub.c/new_slab:need to modify pte!\n");
+			printk(KERN_INFO "come from mm/slub.c/new_slab:need to modify pte!name:%s\n",s->name);
 	}
 	order = compound_order(page);
 	inc_slabs_node(s, page_to_nid(page), page->objects);
