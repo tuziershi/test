@@ -5147,14 +5147,16 @@ static char *create_unique_id(struct kmem_cache *s)
 		*p++ = 'F';
 	if (!(s->flags & SLAB_NOTRACK))
 		*p++ = 't';
+	if(!memcmp(s->name,"dma-kmalloc-files",17)||!memcmp(s->name,"kmalloc-files",13))
+		*p++ = 'f';
 	if (p != name + 1)
 		*p++ = '-';
-	p += sprintf(p, "%07d-%s", s->size,s->name);
+	p += sprintf(p, "%07d", s->size);
 
 #ifdef CONFIG_MEMCG_KMEM
 	if (!is_root_cache(s))
-		p += sprintf(p, "-%08d-%s",
-				memcg_cache_id(s->memcg_params->memcg),s->name);
+		p += sprintf(p, "-%08d",
+				memcg_cache_id(s->memcg_params->memcg));
 #endif
 
 	BUG_ON(p > name + ID_STR_LENGTH - 1);
