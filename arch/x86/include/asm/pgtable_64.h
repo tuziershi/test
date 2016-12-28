@@ -20,9 +20,10 @@ extern pmd_t level2_kernel_pgt[512];
 extern pmd_t level2_fixmap_pgt[512];
 extern pmd_t level2_ident_pgt[512];
 extern pgd_t init_level4_pgt[];
+extern pgd_t init_level4_pgt_files[];
 
 #define swapper_pg_dir init_level4_pgt
-
+#define swapper_pg_dir_files init_level4_pgt_files
 extern void paging_init(void);
 
 #define pte_ERROR(e)					\

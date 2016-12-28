@@ -446,6 +446,8 @@ NEXT_PAGE(early_dynamic_pgts)
 	.data
 
 #ifndef CONFIG_XEN
+NEXT_PAGE(init_level4_pgt_files)
+	.fill	512,8,0
 NEXT_PAGE(init_level4_pgt)
 	.fill	512,8,0
 #else
