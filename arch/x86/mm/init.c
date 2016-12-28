@@ -553,7 +553,7 @@ void __init init_mem_mapping(void)
 		printk(KERN_INFO "call memory_map_bottom_up from init_mem_mapping. [kernel_end,end]=[%lu,%lu]\n",kernel_end,end);
 		memory_map_bottom_up(ISA_END_ADDRESS, kernel_end);
 	} else {
-		printk(KERN_INFO "call memory_map_top_down from init_mem_mapping\n.[ISA_END_ADDRESS,end]=[%lu,%lu]\n",ISA_END_ADDRESS, end);
+		printk(KERN_INFO "call memory_map_top_down from init_mem_mapping\n.[ISA_END_ADDRESS,end]=[%d,%lu]\n",ISA_END_ADDRESS, end);
 		memory_map_top_down(ISA_END_ADDRESS, end);
 	}
 
