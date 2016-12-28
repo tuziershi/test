@@ -613,7 +613,7 @@ kernel_physical_mapping_init(unsigned long start,
 		pgd_t *pgd = pgd_offset_k(start);          //在swapper_pg_dir中取出pgd_t；
 		pud_t *pud;                          //pgd_t对应的页面；
 
-		pgd_t *pgd_files=swapper_pg_dir_files+pgd_index(address);     //在对应的swapper_pg_dir中取出对应的pgd_t；
+		pgd_t *pgd_files=swapper_pg_dir_files+pgd_index(start);     //在对应的swapper_pg_dir中取出对应的pgd_t；
 		pud_t *pud_files;						//对应的pud页面；
 
 		next = (start & PGDIR_MASK) + PGDIR_SIZE;
@@ -632,7 +632,8 @@ kernel_physical_mapping_init(unsigned long start,
 		pud_files =alloc_low_page();
 		last_map_addr = phys_pud_init(pud, __pa(start), __pa(end),
 						 page_size_mask);
-		phys_pud_init(pud_files, __pa(start),__pa(end),page_size_mask)；    //page_size_mask是之前的split函数中就设置好的。(按理说调用了这个底层是不是就不用管了)；
+		//phys_pud_init(pud_files,__pa(start),__pa(end),page_size_mask);    //page_size_mask是之前的split函数中就设置好的。(按理说调用了这个底层是不是就不用管了)；
+		phys_pud_init(pud_files,__pa(start),__pa(end),page_size_mask);
 		spin_lock(&init_mm.page_table_lock);
 		pgd_populate(&init_mm, pgd, pud);
 		//set_pgd(pgd_files,__pgd(_PAGE_TABLE|__pa(pud_files)));        //将对应的值设置到对应的项上；
