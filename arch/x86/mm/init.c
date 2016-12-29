@@ -27,7 +27,7 @@ static unsigned long __initdata pgt_buf_top;
 static unsigned long min_pfn_mapped;
 
 static bool __initdata can_use_brk_pgt = true;
-
+//pgd_t* init_level4_pgt_files;
 /*
  * Pages returned are already directly mapped.
  *
@@ -522,7 +522,7 @@ static void __init memory_map_bottom_up(unsigned long map_start,
 void __init init_mem_mapping(void)
 {
 	unsigned long end;
-
+	//swapper_pg_dir_files=(pgd_t*)alloc_low_page();
 	probe_page_size_mask();
 
 #ifdef CONFIG_X86_64

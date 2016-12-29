@@ -274,7 +274,7 @@ void arch_crash_save_vmcoreinfo(void)
 {
 	VMCOREINFO_SYMBOL(phys_base);
 	VMCOREINFO_SYMBOL(init_level4_pgt);
-	VMCOREINFO_SYMBOL(init_level4_pgt_files);
+	//VMCOREINFO_SYMBOL(init_level4_pgt_files);
 
 #ifdef CONFIG_NUMA
 	VMCOREINFO_SYMBOL(node_data);
