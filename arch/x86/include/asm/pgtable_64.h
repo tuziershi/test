@@ -22,11 +22,11 @@ extern pmd_t level2_ident_pgt[512];
 extern pgd_t init_level4_pgt[];
 //#ifndef __INIT_LEVEL4_PGT_FILES__
 //#define __INIT_LEVEL4_PGT_FILES__
-//extern pgd_t* init_level4_pgt_files;
+extern pgd_t init_level4_pgt_files[];
 //#endif
 
 #define swapper_pg_dir init_level4_pgt
-//#define swapper_pg_dir_files init_level4_pgt_files
+#define swapper_pg_dir_files init_level4_pgt_files
 extern void paging_init(void);
 //extern void copy_page_tables(void);
 #define pte_ERROR(e)					\

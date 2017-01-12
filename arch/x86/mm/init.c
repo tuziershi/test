@@ -79,7 +79,7 @@ __ref void *alloc_low_pages(unsigned int num)
 }
 
 /* need 3 4k for initial PMD_SIZE,  3 4k for 0-ISA_END_ADDRESS */
-#define INIT_PGT_BUF_SIZE	(6 * PAGE_SIZE)
+#define INIT_PGT_BUF_SIZE	(16 * PAGE_SIZE)
 RESERVE_BRK(early_pgt_alloc, INIT_PGT_BUF_SIZE);
 void  __init early_alloc_pgt_buf(void)
 {
@@ -342,7 +342,8 @@ unsigned long __init_refok init_memory_mapping(unsigned long start,
 	struct map_range mr[NR_RANGE_MR];
 	unsigned long ret = 0;
 	int nr_range, i;
-
+	
+	//int index=0;
 	pr_info("init_memory_mapping: [mem %#010lx-%#010lx]\n",
 	       start, end - 1);
 
@@ -350,11 +351,19 @@ unsigned long __init_refok init_memory_mapping(unsigned long start,
 	nr_range = split_mem_range(mr, 0, start, end);
 
 	for (i = 0; i < nr_range; i++)
+	{
+		kernel_physical_mapping_init_files(mr[i].start, mr[i].end,
+                                                   mr[i].page_size_mask);
 		ret = kernel_physical_mapping_init(mr[i].start, mr[i].end,
 						   mr[i].page_size_mask);
-
+		//kernel_physical_mapping_init_files(mr[i].start, mr[i].end,
+                  //                                 mr[i].page_size_mask);
+	}
 	add_pfn_range_mapped(start >> PAGE_SHIFT, ret >> PAGE_SHIFT);
-
+	//for(;index<512;index++)
+	//{
+	//	printk(KERN_INFO "swapper_pg_dir[%d]:%lu;swapper_pg_dir_files[%d]:%lu\n",index,swapper_pg_dir[index].pgd,index,swapper_pg_dir_files[index].pgd);
+	//}
 	return ret >> PAGE_SHIFT;
 }
 
@@ -522,6 +531,12 @@ static void __init memory_map_bottom_up(unsigned long map_start,
 void __init init_mem_mapping(void)
 {
 	unsigned long end;
+	//int index=0;
+        //for(;index<512;index++)
+        //{
+        //      printk(KERN_INFO "swapper_pg_dir[%d]:%lu;swapper_pg_dir_files[%d]:%lu\n",index,swapper_pg_dir[index].pgd,index,swapper_pg_dir_files[index].pgd);
+        //}
+
 	//swapper_pg_dir_files=(pgd_t*)alloc_low_page();
 	probe_page_size_mask();
 

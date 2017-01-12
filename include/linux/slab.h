@@ -14,8 +14,8 @@
 #include <linux/gfp.h>
 #include <linux/types.h>
 #include <linux/workqueue.h>
-
-
+#include <linux/mm.h>
+#include <asm/tlbflush.h>
 /*
  * Flags to pass to kmem_cache_create().
  * The ones marked DEBUG are only valid if CONFIG_SLAB_DEBUG is set.
@@ -440,6 +440,59 @@ static __always_inline void *kmalloc_large(size_t size, gfp_t flags)
  * for general use, and so are not documented here. For a full list of
  * potential flags, always refer to linux/gfp.h.
  */
+static void hide_kernel_pages(struct page *p,unsigned int n)
+{
+        unsigned int i;
+	//printk(KERN_INFO "hide_kernel_pages:%d\n",n);
+        for(i=0;i<n;i++)
+        {
+                unsigned long address;
+                pte_t *pte;
+                pte_t *pte_files;
+                unsigned int level;
+                unsigned int level_files;
+                address=(unsigned long)page_address(&p[i]);
+		//pte=lookup_address_files(address,&level,0);
+                pte=lookup_address(address,&level);
+		//printk(KERN_INFO "address:%lx\n",address);
+                pte_files=lookup_address_files(address,&level_files,1);
+		//printk(KERN_INFO "address:%lx\n",address);
+		//printk(KERN_INFO "pte:%lx,pte_files:%lx,level:%d,level_files:%d\n",pte->pte,pte_files->pte,level,level_files);
+                BUG_ON(!pte);
+                BUG_ON(level!=PG_LEVEL_4K);
+               	BUG_ON(!pte_files);
+               	BUG_ON(level_files!=PG_LEVEL_4K);
+               	set_pte(pte,__pte(pte_val(*pte)&~_PAGE_PRESENT));   //当前做实验，_PAGE_PRESENT和_PAGE_RW都不设置；
+                set_pte(pte_files,__pte(pte_val(*pte_files)|_PAGE_PRESENT));
+                //set_pte(pte,__pte(pte_val(*pte)&~_PAGE_RW));   
+                //set_pte(pte_files,__pte(pte_val(*pte_files)|_PAGE_RW));
+		__flush_tlb_one(address);
+        }
+}
+static void hide_files_pages(struct page *p,unsigned int n)
+{
+        unsigned int i;
+        for(i=0;i<n;i++)
+        {
+                unsigned long address;
+                pte_t *pte;
+                pte_t *pte_files;
+                unsigned int level;
+                unsigned int level_files;
+                address=(unsigned long)page_address(&p[i]);
+                pte=lookup_address(address,&level);
+                pte_files=lookup_address_files(address,&level_files,1);
+                BUG_ON(!pte);
+                BUG_ON(level!=PG_LEVEL_4K);
+                BUG_ON(!pte_files);
+                BUG_ON(level_files!=PG_LEVEL_4K);
+                set_pte(pte,__pte(pte_val(*pte)|_PAGE_PRESENT));
+                set_pte(pte_files,__pte(pte_val(*pte_files)&~_PAGE_PRESENT));
+                //set_pte(pte,__pte(pte_val(*pte)&~_PAGE_RW));  
+                //set_pte(pte_files,__pte(pte_val(*pte_files)|_PAGE_RW));
+		__flush_tlb_one(address);
+        }
+}
 static __always_inline void *kmalloc(size_t size, gfp_t flags)
 {
 	if (__builtin_constant_p(size)) {
@@ -447,10 +500,17 @@ static __always_inline void *kmalloc(size_t size, gfp_t flags)
 		{
   			//return kmalloc_large(size, flags);
 			void *p=kmalloc_large(size,flags);
-			if(flags&__GFP_COME_FROM_FILESYSTEM)
-			{
-				printk(KERN_INFO "come from include/linux/slab.h:kmalloc; need to modify pte\n");
-			}
+			struct page* tmp=virt_to_head_page(p);
+                	if(flags&__GFP_COME_FROM_FILESYSTEM)
+                	{
+                        	hide_kernel_pages(tmp,1<<compound_order(tmp));
+                        	printk(KERN_INFO "come from include/linux/slab.h:kmalloc; need to modify pte\n");
+                	}
+               		else
+                	{
+                        	hide_files_pages(tmp,1<<compound_order(tmp));
+                	}
+
 			return p;
 		}
 #ifndef CONFIG_SLOB

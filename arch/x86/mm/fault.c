@@ -901,7 +901,7 @@ mm_fault_error(struct pt_regs *regs, unsigned long error_code,
 
 static int spurious_fault_check(unsigned long error_code, pte_t *pte)
 {
-	if ((error_code & PF_WRITE) && !pte_write(*pte))
+	if ((error_code & PF_WRITE) && !pte_write(*pte))	
 		return 0;
 
 	if ((error_code & PF_INSTR) && !pte_exec(*pte))
@@ -1018,6 +1018,8 @@ static inline bool smap_violation(int error_code, struct pt_regs *regs)
 static void __kprobes
 __do_page_fault(struct pt_regs *regs, unsigned long error_code)
 {
+	unsigned int level;
+	pte_t* pte;
 	struct vm_area_struct *vma;
 	struct task_struct *tsk;
 	unsigned long address;
@@ -1062,6 +1064,12 @@ __do_page_fault(struct pt_regs *regs, unsigned long error_code)
 
 			if (kmemcheck_fault(regs, address, error_code))
 				return;
+			printk(KERN_INFO "page fault1 for pte\n");
+			pte=lookup_address(address,&level);
+			set_pte(pte,__pte(pte_val(*pte)|_PAGE_PRESENT));
+			//set_pte(pte,__pte(pte_val(*pte)|_PAGE_RW));
+			return;
+			
 		}
 
 		/* Can handle a stale RO->RW TLB: */
@@ -1071,6 +1079,13 @@ __do_page_fault(struct pt_regs *regs, unsigned long error_code)
 		/* kprobes don't want to hook the spurious faults: */
 		if (kprobes_fault(regs))
 			return;
+		
+		//printk(KERN_INFO "page fault2 for pte\n");
+                //pte=lookup_address(address,&level);
+                //set_pte(pte,__pte(pte_val(*pte)|_PAGE_PRESENT));
+                //set_pte(pte,__pte(pte_val(*pte)|_PAGE_RW));
+                //return;
+
 		/*
 		 * Don't take the mm semaphore here. If we fixup a prefetch
 		 * fault we could otherwise deadlock:

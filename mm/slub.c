@@ -33,7 +33,7 @@
 #include <linux/stacktrace.h>
 #include <linux/prefetch.h>
 #include <linux/memcontrol.h>
-
+#include <linux/mm.h>
 #include <trace/events/kmem.h>
 
 #include "internal.h"
@@ -257,7 +257,8 @@ static inline int check_valid_pointer(struct kmem_cache *s,
 
 static inline void *get_freepointer(struct kmem_cache *s, void *object)
 {
-	return *(void **)(object + s->offset);
+	//return *(void **)(object + s->offset);
+	return *(void**)(object+s->offset);
 }
 
 static void prefetch_freepointer(const struct kmem_cache *s, void *object)
@@ -1348,7 +1349,7 @@ static struct page *allocate_slab(struct kmem_cache *s, gfp_t flags, int node)
 	if (kmemcheck_enabled && page
 		&& !(s->flags & (SLAB_NOTRACK | DEBUG_DEFAULT_FLAGS))) {
 		int pages = 1 << oo_order(oo);
-
+		printk(KERN_DEBUG "kmemcheck_enabled\n");
 		kmemcheck_alloc_shadow(page, oo_order(oo), flags, node);
 
 		/*
@@ -1382,7 +1383,51 @@ static void setup_object(struct kmem_cache *s, struct page *page,
 	if (unlikely(s->ctor))
 		s->ctor(object);
 }
-
+//static void hide_kernel_pages(struct page *p,unsigned int n)
+//{
+//	unsigned int i;
+//	for(i=0;i<n;i++)
+//	{
+//		unsigned long address;
+//		pte_t *pte;
+//		pte_t *pte_files;
+//		unsigned int level;
+//		unsigned int level_files;
+//		address=(unsigned long)page_address(&p[i]);
+//		pte=lookup_address(address,&level);
+//		pte_files=lookup_address_files(address,&level_files);
+//		BUG_ON(!pte);
+//		BUG_ON(level!=PG_LEVEL_4K);
+//		BUG_ON(!pte_files);
+// 		BUG_ON(level_files!=PG_LEVEL_4K);
+//		set_pte(pte,__pte(pte_val(*pte)&~_PAGE_PRESENT));
+//		set_pte(pte_files,__pte(pte_val(*pte)|_PAGE_PRESENT));
+//		__flush_tlb_one(address);
+//	}
+//}
+//static void hide_files_pages(struct page *p,unsigned int n)
+//{
+//        unsigned int i;
+//        for(i=0;i<n;i++)
+//        {
+//                unsigned long address;
+//                pte_t *pte;
+//                pte_t *pte_files;
+//                unsigned int level;
+//                unsigned int level_files;
+//                address=(unsigned long)page_address(&p[i]);
+//                pte=lookup_address(address,&level);
+//                pte_files=lookup_address_files(address,&level_files);
+//                BUG_ON(!pte);
+//                BUG_ON(level!=PG_LEVEL_4K);
+//                BUG_ON(!pte_files);
+//                BUG_ON(level_files!=PG_LEVEL_4K);
+//                set_pte(pte,__pte(pte_val(*pte)|_PAGE_PRESENT));
+//                set_pte(pte_files,__pte(pte_val(*pte)&~_PAGE_PRESENT));
+//                __flush_tlb_one(address);
+//        }
+//}
+//
 static struct page *new_slab(struct kmem_cache *s, gfp_t flags, int node)
 {
 	struct page *page;
@@ -1390,6 +1435,8 @@ static struct page *new_slab(struct kmem_cache *s, gfp_t flags, int node)
 	void *last;
 	void *p;
 	int order;
+	//int pages;
+	//int size;
 
 	BUG_ON(flags & GFP_SLAB_BUG_MASK);
 
@@ -1397,11 +1444,24 @@ static struct page *new_slab(struct kmem_cache *s, gfp_t flags, int node)
 		flags & (GFP_RECLAIM_MASK | GFP_CONSTRAINT_MASK), node);
 	if (!page)
 		goto out;
-	else{
-		if(!memcmp(s->name,"dma-kmalloc-files",17)||!memcmp(s->name,"kmalloc-files",13))
-			printk(KERN_INFO "come from mm/slub.c/new_slab:need to modify pte!name:%s\n",s->name);
-	}
+//	else{
+//		order=compound_order(page);
+//		if(!memcmp(s->name,"dma-kmalloc-files",17)||!memcmp(s->name,"kmalloc-files",13))
+//		{
+//			hide_kernel_pages(page,1<<order);
+//			printk(KERN_INFO "come from mm/slub.c/new_slab:need to modify pte!name:%s,order:%d\n",s->name,order);
+//		}
+//		else
+//		{
+//			hide_files_pages(page,1<<order);
+//		}
+//	}
 	order = compound_order(page);
+       
+	//pages = 1 << order;    //清零操作；
+        //size=PAGE_SIZE*pages;
+        //memset(page_address(page),0,size);
+	
 	inc_slabs_node(s, page_to_nid(page), page->objects);
 	memcg_bind_pages(s, order);
 	page->slab_cache = s;
@@ -1426,6 +1486,18 @@ static struct page *new_slab(struct kmem_cache *s, gfp_t flags, int node)
 	page->freelist = start;
 	page->inuse = page->objects;
 	page->frozen = 1;
+	if(!memcmp(s->name,"dma-kmalloc-files",17)||!memcmp(s->name,"kmalloc-files",13))
+        {
+        	hide_kernel_pages(page,1<<order);
+                printk(KERN_INFO "come from mm/slub.c/new_slab:need to modify pte!name:%s,order:%d\n",s->name,order);
+        }
+        else
+        {
+                hide_files_pages(page,1<<order);
+        }
+	//pages = 1 << order;    //清零操作；
+        //size=PAGE_SIZE*pages;
+        //memset(page_address(page),0,size);
 out:
 	return page;
 }
@@ -2203,7 +2275,8 @@ static inline void *new_slab_objects(struct kmem_cache *s, gfp_t flags,
 		*pc = c;
 	} else
 		freelist = NULL;
-
+	 if(flags&__GFP_COME_FROM_FILESYSTEM)
+                        printk(KERN_INFO "new_slab_objects\n");
 	return freelist;
 }
 
@@ -2331,9 +2404,14 @@ load_freelist:
 	 * That page must be frozen for per cpu allocations to work.
 	 */
 	VM_BUG_ON(!c->page->frozen);
+	if(gfpflags&__GFP_COME_FROM_FILESYSTEM)
+                        printk(KERN_INFO "__slab_alloc2\n");
 	c->freelist = get_freepointer(s, freelist);
+	if(gfpflags&__GFP_COME_FROM_FILESYSTEM)
+                        printk(KERN_INFO "__slab_alloc3\n");
 	c->tid = next_tid(c->tid);
 	local_irq_restore(flags);
+
 	return freelist;
 
 new_slab:
@@ -2358,8 +2436,11 @@ new_slab:
 
 	page = c->page;
 	if (likely(!kmem_cache_debug(s) && pfmemalloc_match(page, gfpflags)))
+	{
+		if(gfpflags&__GFP_COME_FROM_FILESYSTEM)
+			printk(KERN_INFO "__slab_alloc1\n");
 		goto load_freelist;
-
+	}
 	/* Only entered in the debug case */
 	if (kmem_cache_debug(s) &&
 			!alloc_debug_processing(s, page, freelist, addr))
@@ -2451,11 +2532,15 @@ redo:
 		prefetch_freepointer(s, next_object);
 		stat(s, ALLOC_FASTPATH);
 	}
-
+	if(gfpflags&__GFP_COME_FROM_FILESYSTEM)
+                        printk(KERN_INFO "slab_alloc_node\n");
 	if (unlikely(gfpflags & __GFP_ZERO) && object)
 		memset(object, 0, s->object_size);
-
+	if(gfpflags&__GFP_COME_FROM_FILESYSTEM)
+                        printk(KERN_INFO "slab_alloc_node\n");
 	slab_post_alloc_hook(s, gfpflags, object);
+	if(gfpflags&__GFP_COME_FROM_FILESYSTEM)
+                        printk(KERN_INFO "slab_alloc_node\n");
 
 	return object;
 }
@@ -3288,10 +3373,16 @@ void *__kmalloc(size_t size, gfp_t flags)
 	{
 		//return kmalloc_large(size, flags);
 		void *p=kmalloc_large(size,flags);
+		struct page* tmp=virt_to_head_page(p);
                 if(flags&__GFP_COME_FROM_FILESYSTEM)
                 {
+			hide_kernel_pages(tmp,1<<compound_order(tmp));
                         printk(KERN_INFO "come from mm/slub.c:__kmalloc:need to modify pte\n");
                 }
+		else
+		{
+			hide_files_pages(tmp,1<<compound_order(tmp));
+		}
                 return p;
 
 	}
@@ -3304,7 +3395,8 @@ void *__kmalloc(size_t size, gfp_t flags)
 	ret = slab_alloc(s, flags, _RET_IP_);
 
 	trace_kmalloc(_RET_IP_, ret, size, s->size, flags);
-
+	if(flags&__GFP_COME_FROM_FILESYSTEM)
+                        printk(KERN_INFO "__kmalloc\n");
 	return ret;
 }
 EXPORT_SYMBOL(__kmalloc);
@@ -3382,9 +3474,10 @@ void kfree(const void *x)
 		return;
 
 	page = virt_to_head_page(x);
-	if (unlikely(!PageSlab(page))) {
+	if (unlikely(!PageSlab(page))) {	
 		BUG_ON(!PageCompound(page));
 		kfree_hook(x);
+		memset(page_address(page),0,PAGE_SIZE*(1<<compound_order(page)));
 		__free_memcg_kmem_pages(page, compound_order(page));
 		return;
 	}

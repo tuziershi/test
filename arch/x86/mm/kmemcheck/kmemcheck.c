@@ -295,7 +295,7 @@ void kmemcheck_hide_pages(struct page *p, unsigned int n)
 		pte = lookup_address(address, &level);
 		BUG_ON(!pte);
 		BUG_ON(level != PG_LEVEL_4K);
-
+		//printk(KERN_DEBUG "kmemcheck_hide_pages:address:%x pte:%lu\n",address,pte->pte);
 		set_pte(pte, __pte(pte_val(*pte) & ~_PAGE_PRESENT));
 		set_pte(pte, __pte(pte_val(*pte) | _PAGE_HIDDEN));
 		__flush_tlb_one(address);

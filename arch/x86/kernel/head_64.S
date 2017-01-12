@@ -449,8 +449,8 @@ NEXT_PAGE(early_dynamic_pgts)
 NEXT_PAGE(init_level4_pgt)
 	.fill	512,8,0
 
-//NEXT_PAGE(init_level4_pgt_files)
-//	.fill	512,8,0
+NEXT_PAGE(init_level4_pgt_files)
+	.fill	512,8,0
 
 #else
 NEXT_PAGE(init_level4_pgt)
@@ -461,8 +461,8 @@ NEXT_PAGE(init_level4_pgt)
 	/* (2^48-(2*1024*1024*1024))/(2^39) = 511 */
 	.quad   level3_kernel_pgt - __START_KERNEL_map + _PAGE_TABLE
 
-//NEXT_PAGE(init_level4_pgt_files)
-//	.fill	512,8,0
+NEXT_PAGE(init_level4_pgt_files)
+	.fill	512,8,0
 
 NEXT_PAGE(level3_ident_pgt)
 	.quad	level2_ident_pgt - __START_KERNEL_map + _KERNPG_TABLE

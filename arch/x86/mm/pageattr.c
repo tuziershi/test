@@ -363,6 +363,47 @@ pte_t *lookup_address(unsigned long address, unsigned int *level)
 }
 EXPORT_SYMBOL_GPL(lookup_address);
 
+pte_t *lookup_address_files(unsigned long address, unsigned int *level,int i)
+{
+        //pgd_t *pgd = swapper_pg_dir_files+pgd_index(address);
+	pgd_t *pgd;	
+        pud_t *pud;
+        pmd_t *pmd;
+	if(i==0)
+        {
+                pgd = swapper_pg_dir+pgd_index(address);
+        }
+        else if(i==1)
+        {
+                pgd = swapper_pg_dir_files+pgd_index(address);
+        }
+        *level = PG_LEVEL_NONE;
+
+        if (pgd_none(*pgd))
+                return NULL;
+
+        pud = pud_offset(pgd, address);
+        if (pud_none(*pud))
+                return NULL;
+
+        *level = PG_LEVEL_1G;
+        if (pud_large(*pud) || !pud_present(*pud))
+                return (pte_t *)pud;
+
+        pmd = pmd_offset(pud, address);
+        if (pmd_none(*pmd))
+                return NULL;
+
+        *level = PG_LEVEL_2M;
+	//printk(KERN_INFO "pmd_large(*pmd):%d,pmd_present(*pmd):%d\n",pmd_large(*pmd),pmd_present(*pmd));
+        if (pmd_large(*pmd) || !pmd_present(*pmd))
+                return (pte_t *)pmd;
+
+        *level = PG_LEVEL_4K;
+
+        return pte_offset_kernel(pmd, address);
+}
+EXPORT_SYMBOL_GPL(lookup_address_files);
 /*
  * This is necessary because __pa() does not work on some
  * kinds of memory, like vmalloc() or the alloc_remap()

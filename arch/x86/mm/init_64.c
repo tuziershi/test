@@ -433,7 +433,7 @@ phys_pte_init(pte_t *pte_page, unsigned long addr, unsigned long end,
 		}
 
 		if (0)
-			printk("   pte=%p addr=%lx pte=%016lx\n",
+			printk("phys_pte_init   pte=%p addr=%lx pte=%016lx\n",
 			       pte, addr, pfn_pte(addr >> PAGE_SHIFT, PAGE_KERNEL).pte);
 		pages++;
 		set_pte(pte, pfn_pte(addr >> PAGE_SHIFT, prot));
@@ -443,6 +443,52 @@ phys_pte_init(pte_t *pte_page, unsigned long addr, unsigned long end,
 	update_page_count(PG_LEVEL_4K, pages);
 
 	return last_map_addr;
+}
+
+static void __meminit
+phys_pte_init_files(pte_t *pte_page, unsigned long addr, unsigned long end,
+              pgprot_t prot)
+{
+        //unsigned long pages = 0, next;
+	unsigned long next;
+        //unsigned long last_map_addr = end;
+        int i;
+
+        pte_t *pte = pte_page + pte_index(addr);
+
+        for (i = pte_index(addr); i < PTRS_PER_PTE; i++, addr = next, pte++) {
+                next = (addr & PAGE_MASK) + PAGE_SIZE;
+                if (addr >= end) {
+                        if (!after_bootmem &&
+                            !e820_any_mapped(addr & PAGE_MASK, next, E820_RAM) &&
+                            !e820_any_mapped(addr & PAGE_MASK, next, E820_RESERVED_KERN))
+                                set_pte(pte, __pte(0));
+                        continue;
+                }
+
+                /*
+                 * We will re-use the existing mapping.
+                 * Xen for example has some special requirements, like mapping
+                 * pagetable pages as RO. So assume someone who pre-setup
+                 * these mappings are more intelligent.
+                 */
+                if (pte_val(*pte)) {
+                        //if (!after_bootmem)
+                        //        pages++;
+                        continue;
+                }
+
+                if (0)
+                        printk("phys_pte_init_files   pte=%p addr=%lx pte=%016lx\n",
+                               pte, addr, pfn_pte(addr >> PAGE_SHIFT, PAGE_KERNEL).pte);
+               // pages++;
+                set_pte(pte, pfn_pte(addr >> PAGE_SHIFT, prot));
+                //last_map_addr = (addr & PAGE_MASK) + PAGE_SIZE;
+        }
+
+       // update_page_count(PG_LEVEL_4K, pages);
+
+       // return last_map_addr;
 }
 
 static unsigned long __meminit
@@ -475,6 +521,7 @@ phys_pmd_init(pmd_t *pmd_page, unsigned long address, unsigned long end,
 				last_map_addr = phys_pte_init(pte, address,
 								end, prot);
 				spin_unlock(&init_mm.page_table_lock);
+
 				continue;
 			}
 			/*
@@ -493,6 +540,9 @@ phys_pmd_init(pmd_t *pmd_page, unsigned long address, unsigned long end,
 				if (!after_bootmem)
 					pages++;
 				last_map_addr = next;
+		
+				//printk("phys_pmd_init   pmd=%p addr=%lx pmd=%016lx\n",
+                               //pmd, address, pfn_pmd(address >> PAGE_SHIFT, PAGE_KERNEL).pmd);
 				continue;
 			}
 			new_prot = pte_pgprot(pte_clrhuge(*(pte_t *)pmd));
@@ -501,6 +551,9 @@ phys_pmd_init(pmd_t *pmd_page, unsigned long address, unsigned long end,
 		if (page_size_mask & (1<<PG_LEVEL_2M)) {
 			pages++;
 			spin_lock(&init_mm.page_table_lock);
+			// if(address>=0x200000000&&address<=0x21bffffff)
+			//     printk("phys_pmd_init   pmd=%p addr=%lx pmd=%016lx\n",
+                        //       pmd, address, pfn_pmd(address >> PAGE_SHIFT, PAGE_KERNEL).pmd);
 			set_pte((pte_t *)pmd,
 				pfn_pte((address & PMD_MASK) >> PAGE_SHIFT,
 					__pgprot(pgprot_val(prot) | _PAGE_PSE)));
@@ -511,6 +564,9 @@ phys_pmd_init(pmd_t *pmd_page, unsigned long address, unsigned long end,
 
 		pte = alloc_low_page();
 		last_map_addr = phys_pte_init(pte, address, end, new_prot);
+		//if (1)
+                //        printk("phys_pmd_init   pmd=%p addr=%lx pmd=%016lx\n",
+                //               pmd, address, pfn_pmd(address >> PAGE_SHIFT, PAGE_KERNEL).pmd);
 
 		spin_lock(&init_mm.page_table_lock);
 		pmd_populate_kernel(&init_mm, pmd, pte);
@@ -518,6 +574,93 @@ phys_pmd_init(pmd_t *pmd_page, unsigned long address, unsigned long end,
 	}
 	update_page_count(PG_LEVEL_2M, pages);
 	return last_map_addr;
+}
+
+static void __meminit
+phys_pmd_init_files(pmd_t *pmd_page, unsigned long address, unsigned long end,
+              unsigned long page_size_mask, pgprot_t prot)
+{
+//	pmd_page->pmd=0;
+//	printk(KERN_ERR "CALL PHYS_PMD_INIT_FILES\n");
+        //unsigned long pages = 0, next;
+	unsigned long next;
+        //unsigned long last_map_addr = end;
+
+        int i = pmd_index(address);
+
+        for (; i < PTRS_PER_PMD; i++, address = next) {
+                pmd_t *pmd = pmd_page + pmd_index(address);
+                pte_t *pte;
+                pgprot_t new_prot = prot;
+
+                next = (address & PMD_MASK) + PMD_SIZE;
+                if (address >= end) {
+                        if (!after_bootmem &&
+                            !e820_any_mapped(address & PMD_MASK, next, E820_RAM) &&
+                            !e820_any_mapped(address & PMD_MASK, next, E820_RESERVED_KERN))
+                                set_pmd(pmd, __pmd(0));
+                        continue;
+                }
+
+                if (pmd_val(*pmd)) {
+                        if (!pmd_large(*pmd)) {
+                                //spin_lock(&init_mm.page_table_lock);
+                                pte = (pte_t *)pmd_page_vaddr(*pmd);
+                                phys_pte_init_files(pte, address,
+                                                                end, prot);
+
+                               // spin_unlock(&init_mm.page_table_lock);
+                                continue;
+                        }
+                        /*
+                         * If we are ok with PG_LEVEL_2M mapping, then we will
+                         * use the existing mapping,
+                         *
+                         * Otherwise, we will split the large page mapping but
+                         * use the same existing protection bits except for
+                         * large page, so that we don't violate Intel's TLB
+                         * Application note (317080) which says, while changing
+                         * the page sizes, new and old translations should
+                         * not differ with respect to page frame and
+                         * attributes.
+                         */
+                        if (page_size_mask & (1 << PG_LEVEL_2M)) {
+                                //if (!after_bootmem)
+                                 //       pages++;
+				printk("phys_pmd_init_files   pmd=%p addr=%lx pmd=%016lx\n",
+                              pmd, address, pfn_pmd(address >> PAGE_SHIFT, PAGE_KERNEL).pmd);
+                               // last_map_addr = next;
+                                continue;
+                        }
+                        new_prot = pte_pgprot(pte_clrhuge(*(pte_t *)pmd));
+                }
+
+                if (page_size_mask & (1<<PG_LEVEL_2M)) {
+                       // pages++;
+                       // spin_lock(&init_mm.page_table_lock);
+			//if(address>=0x200000000&&address<=0x21bffffff)
+		  	// printk("phys_pmd_init_files   pmd=%p addr=%lx pmd=%016lx\n",
+                         //      pmd, address, pfn_pmd(address >> PAGE_SHIFT, PAGE_KERNEL).pmd);
+                        set_pte((pte_t *)pmd,
+                                pfn_pte((address & PMD_MASK) >> PAGE_SHIFT,
+                                        __pgprot(pgprot_val(prot) | _PAGE_PSE)));
+                       // spin_unlock(&init_mm.page_table_lock);
+                       // last_map_addr = next;
+                        continue;
+                }
+
+                pte = alloc_low_page();
+                phys_pte_init_files(pte, address, end, new_prot);
+		//if (1)
+                //        printk("phys_pmd_init_files   pmd=%p addr=%lx pmd=%016lx\n",
+                //               pmd, address, pfn_pmd(address >> PAGE_SHIFT, PAGE_KERNEL).pmd);
+                //spin_lock(&init_mm.page_table_lock);
+		set_pmd(pmd,__pmd(__pa(pte)|_PAGE_TABLE));
+                //pmd_populate_kernel(&init_mm, pmd, pte);
+                //spin_unlock(&init_mm.page_table_lock);
+        }
+       //update_page_count(PG_LEVEL_2M, pages);
+       //return last_map_addr;
 }
 
 static unsigned long __meminit
@@ -597,6 +740,87 @@ phys_pud_init(pud_t *pud_page, unsigned long addr, unsigned long end,
 	return last_map_addr;
 }
 
+static void __meminit
+phys_pud_init_files(pud_t *pud_page, unsigned long addr, unsigned long end,
+                         unsigned long page_size_mask)
+{
+//	pud_page->pud=0;
+//	printk(KERN_ERR "call phys_pud_init_files\n");
+//        //unsigned long pages = 0, next;
+	unsigned long next;
+//        //unsigned long last_map_addr = end;
+        int i = pud_index(addr);
+
+        for (; i < PTRS_PER_PUD; i++, addr = next) {
+//		printk(KERN_ERR "HELLO WORLD\n");
+                pud_t *pud = pud_page + pud_index(addr);
+                pmd_t *pmd; 
+                pgprot_t prot = PAGE_KERNEL;
+//		printk(KERN_ERR "HELLO WORLD\n");
+                next = (addr & PUD_MASK) + PUD_SIZE;
+                if (addr >= end) {
+                        if (!after_bootmem &&
+                            !e820_any_mapped(addr & PUD_MASK, next, E820_RAM) &&
+                            !e820_any_mapped(addr & PUD_MASK, next, E820_RESERVED_KERN))
+                               set_pud(pud, __pud(0));
+                        continue;
+                }
+                if (pud_val(*pud)) {
+                        if (!pud_large(*pud)) {
+                                pmd = pmd_offset(pud, 0);
+                           phys_pmd_init_files(pmd, addr, end,
+                                                        page_size_mask, prot);
+//                                //__flush_tlb_all();
+                                continue;
+                        }
+//                        /*
+//                         * If we are ok with PG_LEVEL_1G mapping, then we will
+//                         * use the existing mapping.
+//                         *
+//                         * Otherwise, we will split the gbpage mapping but use
+//                         * the same existing protection  bits except for large
+//                         * page, so that we don't violate Intel's TLB
+//                         * Application note (317080) which says, while changing
+//                         * the page sizes, new and old translations should
+//                         * not differ with respect to page frame and
+//                         * attributes.
+//                         */
+                        if (page_size_mask & (1 << PG_LEVEL_1G)) {
+//                                //if (!after_bootmem)
+//                             	//           pages++;
+                                //last_map_addr = next;
+                                continue;
+                        }
+                        prot = pte_pgprot(pte_clrhuge(*(pte_t *)pud));
+                }
+//
+                if (page_size_mask & (1<<PG_LEVEL_1G)) {
+//                       // pages++;
+//                       // spin_lock(&init_mm.page_table_lock);
+                        set_pte((pte_t *)pud,
+                                pfn_pte((addr & PUD_MASK) >> PAGE_SHIFT,
+                                        PAGE_KERNEL_LARGE));
+//                       // spin_unlock(&init_mm.page_table_lock);
+//                       // last_map_addr = next;
+                        continue;
+                }
+//
+		  pmd = alloc_low_page();
+	        phys_pmd_init_files(pmd, addr, end, page_size_mask,
+                                              prot);
+//
+//               //spin_lock(&init_mm.page_table_lock);
+//               //pud_populate(&init_mm, pud, pmd);
+		set_pud(pud,__pud(_PAGE_TABLE|__pa(pmd)));
+//               // spin_unlock(&init_mm.page_table_lock);
+        }
+//       // __flush_tlb_all();
+//
+//        //update_page_count(PG_LEVEL_1G, pages);
+//
+//        //return last_map_addr;
+}
+
 unsigned long __meminit
 kernel_physical_mapping_init(unsigned long start,
 			     unsigned long end,
@@ -614,8 +838,8 @@ kernel_physical_mapping_init(unsigned long start,
 		pgd_t *pgd = pgd_offset_k(start);          //在swapper_pg_dir中取出pgd_t；
 		pud_t *pud;                          //pgd_t对应的页面；
 
-	//	pgd_t *pgd_files=swapper_pg_dir_files+pgd_index(start);     //在对应的swapper_pg_dir中取出对应的pgd_t；
-	//	pud_t *pud_files;						//对应的pud页面；
+		//pgd_t *pgd_files=swapper_pg_dir_files+pgd_index(start);     //在对应的swapper_pg_dir中取出对应的pgd_t；
+		//pud_t *pud_files;						//对应的pud页面；
 
 		next = (start & PGDIR_MASK) + PGDIR_SIZE;
 
@@ -623,23 +847,23 @@ kernel_physical_mapping_init(unsigned long start,
 			pud = (pud_t *)pgd_page_vaddr(*pgd);
 			last_map_addr = phys_pud_init(pud, __pa(start),
 						 __pa(end), page_size_mask);
-	//		pud_files=alloc_low_page();
-	//		phys_pud_init(pud_files,__pa(start),__pa(end),page_size_mask);
-	//		set_pgd(pgd_files,__pgd(_PAGE_TABLE|__pa(pud_files)));
+		//	pud_files=alloc_low_page();
+		//	phys_pud_init(pud_files,__pa(start),__pa(end),page_size_mask);
+		//	set_pgd(pgd_files,__pgd(_PAGE_TABLE|__pa(pud_files)));
 			continue;
 		}
 
 		pud = alloc_low_page();
-	//	pud_files =alloc_low_page();
+		//pud_files =alloc_low_page();
 		last_map_addr = phys_pud_init(pud, __pa(start), __pa(end),
 						 page_size_mask);
 		//phys_pud_init(pud_files,__pa(start),__pa(end),page_size_mask);    //page_size_mask是之前的split函数中就设置好的。(按理说调用了这个底层是不是就不用管了)；
-	//	phys_pud_init(pud_files,__pa(start),__pa(end),page_size_mask);
+		//phys_pud_init(pud_files,__pa(start),__pa(end),page_size_mask);
 		spin_lock(&init_mm.page_table_lock);
 		pgd_populate(&init_mm, pgd, pud);
 		//set_pgd(pgd_files,__pgd(_PAGE_TABLE|__pa(pud_files)));        //将对应的值设置到对应的项上；
 		spin_unlock(&init_mm.page_table_lock);
-	 //	set_pgd(pgd_files,__pgd(_PAGE_TABLE|__pa(pud_files)));        //将对应的值设置到对应的项上；
+	 	//set_pgd(pgd_files,__pgd(_PAGE_TABLE|__pa(pud_files)));        //将对应的值设置到对应的项上；
 		pgd_changed = true;
 	}
 
@@ -651,6 +875,51 @@ kernel_physical_mapping_init(unsigned long start,
 	return last_map_addr;
 }
 
+void __meminit kernel_physical_mapping_init_files(unsigned long start,
+                             unsigned long end,
+                             unsigned long page_size_mask)
+{
+     	//unsigned long next, last_map_addr = end;
+	unsigned long next;
+        unsigned long addr;
+
+        start = (unsigned long)__va(start);
+        end = (unsigned long)__va(end);
+        addr = start;
+
+        for (; start < end; start = next) {
+               // pgd_t *pgd = pgd_offset_k(start);          //在swapper_pg_dir中取出pgd_t；
+               // pud_t *pud;                          //pgd_t对应的页面；
+
+                pgd_t *pgd_files=swapper_pg_dir_files+pgd_index(start);     //在对应的swapper_pg_dir中取出对应的pgd_t；
+                pud_t *pud_files;                                             //对应的pud页面；
+	//	printk(KERN_INFO "kernel_physical_mapping_init_files:%lu\n",pgd_files->pgd);
+                next = (start & PGDIR_MASK) + PGDIR_SIZE;
+
+                if (pgd_val(*pgd_files)) {               //这里是为了说明已经建立映射的情况，但是因为我们的swapper_pg_dir_files肯定没有建立映射；
+                        printk(KERN_INFO "kernel_physical_mapping_init_files:%lu\n",pgd_files->pgd);
+			 pud_files = (pud_t *)pgd_page_vaddr(*pgd_files);
+                        phys_pud_init_files(pud_files, __pa(start),
+                                                 __pa(end), page_size_mask);
+                //      pud_files=alloc_low_page();
+                //      phys_pud_init(pud_files,__pa(start),__pa(end),page_size_mask);
+                //      set_pgd(pgd_files,__pgd(_PAGE_TABLE|__pa(pud_files)));
+                        continue;
+                }
+
+                //pud = alloc_low_page();
+                pud_files =alloc_low_page();
+                //last_map_addr = phys_pud_init(pud, __pa(start), __pa(end),
+                //                                 page_size_mask);
+                //phys_pud_init(pud_files,__pa(start),__pa(end),page_size_mask);    //page_size_mask是之前的split函数中就设置好的。(按理说调用了这个底层是不是就不用管了)；
+           	 phys_pud_init_files(pud_files,__pa(start),__pa(end),page_size_mask);
+                //spin_lock(&init_mm.page_table_lock);
+                //pgd_populate(&init_mm, pgd, pud);
+                //set_pgd(pgd_files,__pgd(_PAGE_TABLE|__pa(pud_files)));        //将对应的值设置到对应的项上；
+                //spin_unlock(&init_mm.page_table_lock);
+           	set_pgd(pgd_files,__pgd(_PAGE_TABLE|__pa(pud_files)));        //将对应的值设置到对应的项上；
+        }
+}
 #ifndef CONFIG_NUMA
 void __init initmem_init(void)
 {

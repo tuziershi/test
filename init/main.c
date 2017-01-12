@@ -83,12 +83,13 @@
 #include <asm/setup.h>
 #include <asm/sections.h>
 #include <asm/cacheflush.h>
-
+#include <asm/tlbflush.h>
 #ifdef CONFIG_X86_LOCAL_APIC
 #include <asm/smp.h>
 #endif
 
 static int kernel_init(void *);
+static int files(void*);
 
 extern void init_IRQ(void);
 extern void fork_init(unsigned long);
@@ -399,6 +400,7 @@ static noinline void __init_refok rest_init(void)
 	schedule_preempt_disabled();
 	/* Call into cpu_idle with preempt disabled */
 	cpu_startup_entry(CPUHP_ONLINE);
+
 }
 
 /* Check for early params. */
@@ -482,6 +484,9 @@ static void __init mm_init(void)
 
 asmlinkage void __init start_kernel(void)
 {
+	//unsigned long address;
+	//unsigned int level;
+	//pte_t* pte;
 	char * command_line;
 	extern const struct kernel_param __start___param[], __stop___param[];
 
@@ -650,9 +655,15 @@ asmlinkage void __init start_kernel(void)
 	}
 
 	ftrace_init();
+	//for(address=0xffff880200000000;address>=0xffff880200000000&&address<=0xffff88021bffffff;address=address+0x200000)
+       // {
+       //         pte=lookup_address(address,&level);
+       //         printk(KERN_INFO "address:%lx,pte:%lx,level:%d\n",address,pte->pte,level);
+        //}
 
 	/* Do the rest non-__init'ed, we're now alive */
 	rest_init();
+
 }
 
 /* Call all constructor functions linked into the kernel. */
@@ -835,7 +846,24 @@ static int try_to_run_init_process(const char *init_filename)
 }
 
 static noinline void __init kernel_init_freeable(void);
+static int files(void *unused)
+{
+    int time_count=0;
+    //unsigned char *buffer;
+    do {
+	  load_cr3(swapper_pg_dir_files);
+	  //printk(KERN_INFO "thread_function\n");
+	  //load_cr3(swapper_pg_dir);
+	 // buffer=(unsigned char*)kmalloc(8,__GFP_COME_FROM_FILESYSTEM);
+          printk(KERN_INFO "thread_function:%d  times,swapper_pg_dir:%p,swapper_pg_dir_files:%p,current:%p %p\n",time_count,swapper_pg_dir,swapper_pg_dir_files,current->mm,current->active_mm->pgd);
+	 time_count++;
+	  load_cr3(swapper_pg_dir);
+          msleep(1000);
+      }while(!kthread_should_stop()&&time_count<5);
+    //    return time_count;
+	return 0;
 
+}
 static int __ref kernel_init(void *unused)
 {
 	int ret;
@@ -847,9 +875,7 @@ static int __ref kernel_init(void *unused)
 	mark_rodata_ro();
 	system_state = SYSTEM_RUNNING;
 	numa_default_policy();
-
 	flush_delayed_fput();
-
 	if (ramdisk_execute_command) {
 		ret = run_init_process(ramdisk_execute_command);
 		if (!ret)
@@ -875,7 +901,9 @@ static int __ref kernel_init(void *unused)
 	    !try_to_run_init_process("/etc/init") ||
 	    !try_to_run_init_process("/bin/init") ||
 	    !try_to_run_init_process("/bin/sh"))
-		return 0;
+		{
+			return 0;
+		}
 
 	panic("No working init found.  Try passing init= option to kernel. "
 	      "See Linux Documentation/init.txt for guidance.");
@@ -887,6 +915,7 @@ static noinline void __init kernel_init_freeable(void)
 	 * Wait until kthreadd is all set-up.
 	 */
 	wait_for_completion(&kthreadd_done);
+	kthread_run(files,NULL,"mythread%d",1);
 
 	/* Now the scheduler is fully set up and can do blocking allocations */
 	gfp_allowed_mask = __GFP_BITS_MASK;
