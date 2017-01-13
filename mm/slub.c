@@ -257,13 +257,38 @@ static inline int check_valid_pointer(struct kmem_cache *s,
 
 static inline void *get_freepointer(struct kmem_cache *s, void *object)
 {
+	void *p;
+	pte_t *pte;
+	unsigned int level;
+	pte=lookup_address((unsigned long)(object+s->offset),&level);
+	if(!(pte_val(*pte)&_PAGE_PRESENT))
+	{
+		set_pte(pte,__pte(pte_val(*pte)|_PAGE_PRESENT));
+		p=*(void**)(object+s->offset);
+		set_pte(pte,__pte(pte_val(*pte)&~_PAGE_PRESENT));
+		return p;
+	}
 	//return *(void **)(object + s->offset);
-	return *(void**)(object+s->offset);
+	p=*(void**)(object+s->offset);
+	return p;
 }
 
 static void prefetch_freepointer(const struct kmem_cache *s, void *object)
 {
-	prefetch(object + s->offset);
+	pte_t * pte;
+        unsigned int level;
+        pte=lookup_address((unsigned long)(object+s->offset),&level);
+        if(pte&&!(pte_val(*pte)&_PAGE_PRESENT))
+        {
+                set_pte(pte,__pte(pte_val(*pte)|_PAGE_PRESENT));
+                prefetch(object + s->offset);
+                set_pte(pte,__pte(pte_val(*pte)&~_PAGE_PRESENT));
+        }
+        else{
+                prefetch(object + s->offset);
+        }
+	
+	//prefetch(object + s->offset);
 }
 
 static inline void *get_freepointer_safe(struct kmem_cache *s, void *object)
@@ -280,7 +305,18 @@ static inline void *get_freepointer_safe(struct kmem_cache *s, void *object)
 
 static inline void set_freepointer(struct kmem_cache *s, void *object, void *fp)
 {
-	*(void **)(object + s->offset) = fp;
+	pte_t * pte;
+	unsigned int level;
+	pte=lookup_address((unsigned long)(object+s->offset),&level);
+	if(!(pte_val(*pte)&_PAGE_PRESENT))
+        {
+                set_pte(pte,__pte(pte_val(*pte)|_PAGE_PRESENT));
+                *(void **)(object + s->offset) = fp;
+                set_pte(pte,__pte(pte_val(*pte)&~_PAGE_PRESENT));
+        }
+	else{
+		*(void **)(object + s->offset) = fp;
+	}
 }
 
 /* Loop over all objects in a slab */
@@ -2470,6 +2506,8 @@ static __always_inline void *slab_alloc_node(struct kmem_cache *s,
 	struct kmem_cache_cpu *c;
 	struct page *page;
 	unsigned long tid;
+	pte_t * pte;
+        unsigned int level;
 
 	if (slab_pre_alloc_hook(s, gfpflags))
 		return NULL;
@@ -2535,7 +2573,20 @@ redo:
 	if(gfpflags&__GFP_COME_FROM_FILESYSTEM)
                         printk(KERN_INFO "slab_alloc_node\n");
 	if (unlikely(gfpflags & __GFP_ZERO) && object)
-		memset(object, 0, s->object_size);
+	{
+		pte=lookup_address((unsigned long)object,&level);
+        	if(!(pte_val(*pte)&_PAGE_PRESENT))
+        	{
+                	set_pte(pte,__pte(pte_val(*pte)|_PAGE_PRESENT));
+                	memset(object, 0, s->object_size);
+                	set_pte(pte,__pte(pte_val(*pte)&~_PAGE_PRESENT));
+        	}
+        	else{
+               		memset(object, 0, s->object_size);
+        	}	
+
+		//memset(object, 0, s->object_size);
+	}
 	if(gfpflags&__GFP_COME_FROM_FILESYSTEM)
                         printk(KERN_INFO "slab_alloc_node\n");
 	slab_post_alloc_hook(s, gfpflags, object);
