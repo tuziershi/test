@@ -1018,8 +1018,9 @@ static inline bool smap_violation(int error_code, struct pt_regs *regs)
 static void __kprobes
 __do_page_fault(struct pt_regs *regs, unsigned long error_code)
 {
-	unsigned int level;
+	unsigned int level,level_files;
 	pte_t* pte;
+	pte_t* pte_files;
 	struct vm_area_struct *vma;
 	struct task_struct *tsk;
 	unsigned long address;
@@ -1064,9 +1065,19 @@ __do_page_fault(struct pt_regs *regs, unsigned long error_code)
 
 			if (kmemcheck_fault(regs, address, error_code))
 				return;
-			printk(KERN_INFO "page fault1 for pte\n");
+			printk(KERN_INFO "page fault1 for pte,address:%lx\n",address);
 			pte=lookup_address(address,&level);
-			set_pte(pte,__pte(pte_val(*pte)|_PAGE_PRESENT));
+			if(!(pte_val(*pte)&_PAGE_PRESENT))
+			{	
+				set_pte(pte,__pte(pte_val(*pte)|_PAGE_PRESENT));
+			        printk(KERN_INFO "lookup_address\n");
+			}
+			pte_files=lookup_address_files(address,&level_files,1);
+			if(!(pte_val(*pte_files)&_PAGE_PRESENT))
+			{
+				set_pte(pte_files,__pte(pte_val(*pte_files)|_PAGE_PRESENT));
+				printk(KERN_INFO "lookup_address_files\n");
+			}
 			//set_pte(pte,__pte(pte_val(*pte)|_PAGE_RW));
 			return;
 			

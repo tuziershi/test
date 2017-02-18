@@ -296,7 +296,20 @@ static inline void *get_freepointer_safe(struct kmem_cache *s, void *object)
 	void *p;
 
 #ifdef CONFIG_DEBUG_PAGEALLOC
-	probe_kernel_read(&p, (void **)(object + s->offset), sizeof(p));
+	pte_t *pte;
+        unsigned int level;
+        pte=lookup_address((unsigned long)(object+s->offset),&level);
+	if(!(pte_val(*pte)&_PAGE_PRESENT))
+        {
+                set_pte(pte,__pte(pte_val(*pte)|_PAGE_PRESENT));
+                probe_kernel_read(&p, (void **)(object + s->offset), sizeof(p));
+                set_pte(pte,__pte(pte_val(*pte)&~_PAGE_PRESENT));
+                //return p;
+        }
+	else{
+		probe_kernel_read(&p, (void **)(object + s->offset), sizeof(p));
+	}
+	//probe_kernel_read(&p, (void **)(object + s->offset), sizeof(p));
 #else
 	p = get_freepointer(s, object);
 #endif
@@ -1522,10 +1535,10 @@ static struct page *new_slab(struct kmem_cache *s, gfp_t flags, int node)
 	page->freelist = start;
 	page->inuse = page->objects;
 	page->frozen = 1;
-	if(!memcmp(s->name,"dma-kmalloc-files",17)||!memcmp(s->name,"kmalloc-files",13))
+	if(!memcmp(s->name,"dma-kmalloc-files",17)||!memcmp(s->name,"kmalloc-files",13))	//if(flags & __GFP_COME_FROM_FILESYSTEM)
         {
         	hide_kernel_pages(page,1<<order);
-                printk(KERN_INFO "come from mm/slub.c/new_slab:need to modify pte!name:%s,order:%d\n",s->name,order);
+                printk(KERN_INFO "come from mm/slub.c/new_slab:need to modify pte!name:%s,order:%d,come_from_filesystem:%d\n",s->name,order,flags&__GFP_COME_FROM_FILESYSTEM);
         }
         else
         {

@@ -849,17 +849,25 @@ static noinline void __init kernel_init_freeable(void);
 static int files(void *unused)
 {
     int time_count=0;
-    //unsigned char *buffer;
+    unsigned char *buffer;
     do {
-	  load_cr3(swapper_pg_dir_files);
+	  //load_cr3(swapper_pg_dir_files);
 	  //printk(KERN_INFO "thread_function\n");
 	  //load_cr3(swapper_pg_dir);
-	 // buffer=(unsigned char*)kmalloc(8,__GFP_COME_FROM_FILESYSTEM);
-          printk(KERN_INFO "thread_function:%d  times,swapper_pg_dir:%p,swapper_pg_dir_files:%p,current:%p %p\n",time_count,swapper_pg_dir,swapper_pg_dir_files,current->mm,current->active_mm->pgd);
-	 time_count++;
+	  printk(KERN_INFO "before kmalloc%d\n",time_count);
+	  buffer=(unsigned char*)kmalloc(8,__GFP_COME_FROM_FILESYSTEM);
+	  printk(KERN_INFO "after kmalloc%d\n",time_count);
+	  load_cr3(swapper_pg_dir_files);
+	  printk(KERN_INFO "after load_cr3%d\n",time_count);
+          //printk(KERN_INFO "thread_function:%d  times,swapper_pg_dir:%p,swapper_pg_dir_files:%p,current:%p %p, thread_name:%s,buffer:%p\n",time_count,swapper_pg_dir,swapper_pg_dir_files,current->mm,current->active_mm->pgd,current->comm,buffer);
+	 printk(KERN_INFO "after printk");
+	  time_count++;
+	  printk(KERN_INFO "after_time_count++\n");
 	  load_cr3(swapper_pg_dir);
+	  printk(KERN_INFO "after load active_mm pgd\n");
           msleep(1000);
-      }while(!kthread_should_stop()&&time_count<5);
+	  kfree(buffer);
+      }while(!kthread_should_stop()&&time_count<10);
     //    return time_count;
 	return 0;
 

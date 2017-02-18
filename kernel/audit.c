@@ -449,15 +449,15 @@ static void flush_hold_queue(void)
 
 static int kauditd_thread(void *dummy)
 {
-	unsigned long address;
-	unsigned int level;
-	pte_t * pte;
+	//unsigned long address;
+	//unsigned int level;
+	//pte_t * pte;
 	set_freezable();
-	for(address=0xffff880200000000;address>=0xffff880200000000&&address<=0xffff88021bffffff;address=address+0x200000)
-       	{
-                pte=lookup_address(address,&level);
-                printk(KERN_INFO "come from kauditd_thread: address:%lx,pte:%lx,level:%d\n",address,pte->pte,level);
-        }
+	//for(address=0xffff880200000000;address>=0xffff880200000000&&address<=0xffff88021bffffff;address=address+0x200000)
+       	//{
+        //        pte=lookup_address(address,&level);
+        //        printk(KERN_INFO "come from kauditd_thread: address:%lx,pte:%lx,level:%d\n",address,pte->pte,level);
+        //}
 
 	while (!kthread_should_stop()) {
 		struct sk_buff *skb;
