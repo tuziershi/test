@@ -1370,7 +1370,10 @@ static struct page *allocate_slab(struct kmem_cache *s, gfp_t flags, int node)
 	gfp_t alloc_gfp;
 
 	flags &= gfp_allowed_mask;
-
+	if(flags & GFP_REQUEST_SOURCE_MASK)
+	{
+		printk(KERN_INFO "ALLOCATE_SLAB 1\n");
+	}
 	if (flags & __GFP_WAIT)
 		local_irq_enable();
 
@@ -1381,6 +1384,10 @@ static struct page *allocate_slab(struct kmem_cache *s, gfp_t flags, int node)
 	 * so we fall-back to the minimum order allocation.
 	 */
 	alloc_gfp = (flags | __GFP_NOWARN | __GFP_NORETRY) & ~__GFP_NOFAIL;
+	 if(alloc_gfp & GFP_REQUEST_SOURCE_MASK)
+        {
+                printk(KERN_INFO "ALLOCATE_SLAB 2\n");
+        }
 
 	page = alloc_slab_page(alloc_gfp, node, oo);
 	if (unlikely(!page)) {
@@ -1488,9 +1495,13 @@ static struct page *new_slab(struct kmem_cache *s, gfp_t flags, int node)
 	//int size;
 
 	BUG_ON(flags & GFP_SLAB_BUG_MASK);
+	if(flags & GFP_REQUEST_SOURCE_MASK)
+	{
+		printk(KERN_INFO "come from new_slab1\n");
+	}
 
 	page = allocate_slab(s,
-		flags & (GFP_RECLAIM_MASK | GFP_CONSTRAINT_MASK), node);
+		flags & (GFP_RECLAIM_MASK | GFP_CONSTRAINT_MASK | GFP_REQUEST_SOURCE_MASK), node);
 	if (!page)
 		goto out;
 //	else{
@@ -1535,15 +1546,16 @@ static struct page *new_slab(struct kmem_cache *s, gfp_t flags, int node)
 	page->freelist = start;
 	page->inuse = page->objects;
 	page->frozen = 1;
-	if(!memcmp(s->name,"dma-kmalloc-files",17)||!memcmp(s->name,"kmalloc-files",13))	//if(flags & __GFP_COME_FROM_FILESYSTEM)
-        {
-        	hide_kernel_pages(page,1<<order);
-                printk(KERN_INFO "come from mm/slub.c/new_slab:need to modify pte!name:%s,order:%d,come_from_filesystem:%d\n",s->name,order,flags&__GFP_COME_FROM_FILESYSTEM);
-        }
-        else
-        {
-                hide_files_pages(page,1<<order);
-        }
+	//if(!memcmp(s->name,"dma-kmalloc-files",17)||!memcmp(s->name,"kmalloc-files",13))	
+	//if(flags & __GFP_COME_FROM_FILESYSTEM)
+        //{
+        //	hide_kernel_pages(page,1<<order);
+        //        printk(KERN_INFO "come from mm/slub.c/new_slab:need to modify pte!name:%s,order:%d,come_from_filesystem:%d\n",s->name,order,flags&__GFP_COME_FROM_FILESYSTEM);
+        //}
+        //if(flags & __GFP_COME_FROM_KERNEL)
+        //{
+        //        hide_files_pages(page,1<<order);
+        //}
 	//pages = 1 << order;    //清零操作；
         //size=PAGE_SIZE*pages;
         //memset(page_address(page),0,size);
@@ -1556,8 +1568,8 @@ static void __free_slab(struct kmem_cache *s, struct page *page)
 	int order = compound_order(page);
 	int pages = 1 << order;
    	
-	int size=PAGE_SIZE*pages;
-	memset(page_address(page),0,size);
+	//int size=PAGE_SIZE*pages;
+	//memset(page_address(page),0,size);
 	//printk(KERN_INFO "come from mm/slub.c __free_slab:need to modify pte");	
 
 	if (kmem_cache_debug(s)) {
@@ -2301,7 +2313,10 @@ static inline void *new_slab_objects(struct kmem_cache *s, gfp_t flags,
 
 	if (freelist)
 		return freelist;
-
+	if(flags & GFP_REQUEST_SOURCE_MASK)
+        {
+                printk(KERN_INFO "come from new_slab_objects1\n");
+        }
 	page = new_slab(s, flags, node);
 	if (page) {
 		//if(flags&__GFP_COME_FROM_FILESYSTEM)
@@ -2325,7 +2340,7 @@ static inline void *new_slab_objects(struct kmem_cache *s, gfp_t flags,
 	} else
 		freelist = NULL;
 	 if(flags&__GFP_COME_FROM_FILESYSTEM)
-                        printk(KERN_INFO "new_slab_objects\n");
+                        printk(KERN_INFO "new_slab_objects2\n");
 	return freelist;
 }
 
@@ -2393,7 +2408,10 @@ static void *__slab_alloc(struct kmem_cache *s, gfp_t gfpflags, int node,
 	void *freelist;
 	struct page *page;
 	unsigned long flags;
-
+	if(gfpflags & GFP_REQUEST_SOURCE_MASK)
+        {
+                printk(KERN_INFO "come from __slab_alloc1\n");
+        }
 	local_irq_save(flags);
 #ifdef CONFIG_PREEMPT
 	/*
@@ -2472,7 +2490,10 @@ new_slab:
 		c->freelist = NULL;
 		goto redo;
 	}
-
+	if(gfpflags & GFP_REQUEST_SOURCE_MASK)
+        {
+                printk(KERN_INFO "come from __slab_alloc4\n");
+        }
 	freelist = new_slab_objects(s, gfpflags, node, &c);
 
 	if (unlikely(!freelist)) {
@@ -2521,6 +2542,10 @@ static __always_inline void *slab_alloc_node(struct kmem_cache *s,
 	unsigned long tid;
 	pte_t * pte;
         unsigned int level;
+	if(gfpflags & GFP_REQUEST_SOURCE_MASK)
+        {
+                printk(KERN_INFO "come from slab_alloc_node1\n");
+        }
 
 	if (slab_pre_alloc_hook(s, gfpflags))
 		return NULL;
@@ -2553,9 +2578,16 @@ redo:
 	object = c->freelist;
 	page = c->page;
 	if (unlikely(!object || !node_match(page, node)))
+	{
+		if(gfpflags & GFP_REQUEST_SOURCE_MASK)
+	        {
+               		 printk(KERN_INFO "come from slab_alloc_node2\n");
+        	}
 		object = __slab_alloc(s, gfpflags, node, addr, c);
-
-	else {
+		
+	}
+	else 
+	{
 		void *next_object = get_freepointer_safe(s, object);
 
 		/*
@@ -3437,16 +3469,16 @@ void *__kmalloc(size_t size, gfp_t flags)
 	{
 		//return kmalloc_large(size, flags);
 		void *p=kmalloc_large(size,flags);
-		struct page* tmp=virt_to_head_page(p);
-                if(flags&__GFP_COME_FROM_FILESYSTEM)
-                {
-			hide_kernel_pages(tmp,1<<compound_order(tmp));
-                        printk(KERN_INFO "come from mm/slub.c:__kmalloc:need to modify pte\n");
-                }
-		else
-		{
-			hide_files_pages(tmp,1<<compound_order(tmp));
-		}
+		//struct page* tmp=virt_to_head_page(p);
+                //if(flags & __GFP_COME_FROM_FILESYSTEM)
+                //{
+		//	hide_kernel_pages(tmp,1<<compound_order(tmp));
+                //        printk(KERN_INFO "come from mm/slub.c:__kmalloc:need to modify pte\n");
+                //}	
+		//if(flags & __GFP_COME_FROM_KERNEL)
+		//{
+		//	hide_files_pages(tmp,1<<compound_order(tmp));
+		//}
                 return p;
 
 	}
@@ -3541,7 +3573,7 @@ void kfree(const void *x)
 	if (unlikely(!PageSlab(page))) {	
 		BUG_ON(!PageCompound(page));
 		kfree_hook(x);
-		memset(page_address(page),0,PAGE_SIZE*(1<<compound_order(page)));
+		//memset(page_address(page),0,PAGE_SIZE*(1<<compound_order(page)));
 		__free_memcg_kmem_pages(page, compound_order(page));
 		return;
 	}

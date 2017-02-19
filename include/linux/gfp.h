@@ -37,6 +37,7 @@ struct vm_area_struct;
 #define ___GFP_WRITE		0x1000000u
 
 #define ___GFP_COME_FROM_FILESYSTEM	0x2000000u
+#define ___GFP_COME_FROM_KERNEL         0x4000000u
 /* If the above are modified, __GFP_BITS_SHIFT may need updating */
 
 /*
@@ -69,6 +70,7 @@ struct vm_area_struct;
  * mechanism or reclaimed
  */
 #define __GFP_COME_FROM_FILESYSTEM      ((__force gfp_t)___GFP_COME_FROM_FILESYSTEM)
+#define __GFP_COME_FROM_KERNEL	((__force gfp_t)___GFP_COME_FROM_KERNEL)
 #define __GFP_WAIT	((__force gfp_t)___GFP_WAIT)	/* Can wait and reschedule? */
 #define __GFP_HIGH	((__force gfp_t)___GFP_HIGH)	/* Should access emergency pools? */
 #define __GFP_IO	((__force gfp_t)___GFP_IO)	/* Can start physical IO? */
@@ -103,7 +105,8 @@ struct vm_area_struct;
 #define __GFP_NOTRACK_FALSE_POSITIVE (__GFP_NOTRACK)
 
 //#define __GFP_BITS_SHIFT 25	/* Room for N __GFP_FOO bits */
-#define __GFP_BITS_SHIFT 26
+//#define __GFP_BITS_SHIFT 26
+#define __GFP_BITS_SHIFT 27
 #define __GFP_BITS_MASK ((__force gfp_t)((1 << __GFP_BITS_SHIFT) - 1))
 
 /* This equals 0, but use constants in case they ever change */
@@ -131,6 +134,8 @@ struct vm_area_struct;
 #else
 #define GFP_THISNODE	((__force gfp_t)0)
 #endif
+
+#define GFP_REQUEST_SOURCE_MASK (__GFP_COME_FROM_FILESYSTEM|__GFP_COME_FROM_KERNEL)
 
 /* This mask makes up all the page movable related flags */
 #define GFP_MOVABLE_MASK (__GFP_RECLAIMABLE|__GFP_MOVABLE)

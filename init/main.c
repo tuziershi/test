@@ -848,15 +848,25 @@ static int try_to_run_init_process(const char *init_filename)
 static noinline void __init kernel_init_freeable(void);
 static int files(void *unused)
 {
+    //unsigned long address;
+    //unsigned int level;
+    //pte_t *pte;
     int time_count=0;
     unsigned char *buffer;
+    unsigned char *buffer1;
     do {
 	  //load_cr3(swapper_pg_dir_files);
 	  //printk(KERN_INFO "thread_function\n");
 	  //load_cr3(swapper_pg_dir);
 	  printk(KERN_INFO "before kmalloc%d\n",time_count);
 	  buffer=(unsigned char*)kmalloc(8,__GFP_COME_FROM_FILESYSTEM);
+	  //address=(unsigned long)buffer&PAGE_MASK;
+	  //pte=lookup_address(address,&level);
+	  //printk(KERN_INFO "COME FROM FILES:address:%lx,pte:%lx,level:%d,bit:%lu\n",address,pte->pte,level,pte_val(*pte)&_PAGE_PRESENT);
+	  buffer[0]='a';
 	  printk(KERN_INFO "after kmalloc%d\n",time_count);
+	  buffer1=(unsigned char*)__get_free_pages(__GFP_COME_FROM_FILESYSTEM,1);
+	  buffer1[0]='a';
 	  load_cr3(swapper_pg_dir_files);
 	  printk(KERN_INFO "after load_cr3%d\n",time_count);
           //printk(KERN_INFO "thread_function:%d  times,swapper_pg_dir:%p,swapper_pg_dir_files:%p,current:%p %p, thread_name:%s,buffer:%p\n",time_count,swapper_pg_dir,swapper_pg_dir_files,current->mm,current->active_mm->pgd,current->comm,buffer);
@@ -865,8 +875,9 @@ static int files(void *unused)
 	  printk(KERN_INFO "after_time_count++\n");
 	  load_cr3(swapper_pg_dir);
 	  printk(KERN_INFO "after load active_mm pgd\n");
-          msleep(1000);
 	  kfree(buffer);
+	  free_pages((unsigned long)buffer1,1);
+          msleep(1000);
       }while(!kthread_should_stop()&&time_count<10);
     //    return time_count;
 	return 0;

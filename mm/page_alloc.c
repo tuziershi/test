@@ -415,6 +415,91 @@ static inline void prep_zero_page(struct page *page, int order, gfp_t gfp_flags)
 		clear_highpage(page + i);
 }
 
+static void set_globally_invisible(struct page *p,unsigned int n)
+{
+        unsigned int i;
+        for(i=0;i<n;i++)
+        {
+                unsigned long address;
+                pte_t *pte;
+                pte_t *pte_files;
+                unsigned int level;
+                unsigned int level_files;
+                address=(unsigned long)page_address(&p[i]);
+                //pte=lookup_address_files(address,&level,0);
+                pte=lookup_address(address,&level);
+                //printk(KERN_INFO "address:%lx\n",address);
+                pte_files=lookup_address_files(address,&level_files,1);
+                //printk(KERN_INFO "address:%lx\n",address);
+                //printk(KERN_INFO "pte:%lx,pte_files:%lx,level:%d,level_files:%d\n",pte->pte,pte_files->pte,level,level_files);
+                BUG_ON(!pte);
+                BUG_ON(level!=PG_LEVEL_4K);
+                BUG_ON(!pte_files);
+                BUG_ON(level_files!=PG_LEVEL_4K);
+                set_pte(pte,__pte(pte_val(*pte)&~_PAGE_PRESENT));
+                set_pte(pte_files,__pte(pte_val(*pte_files)&~_PAGE_PRESENT));
+                //set_pte(pte,__pte(pte_val(*pte)&~_PAGE_RW));   
+                //set_pte(pte_files,__pte(pte_val(*pte_files)|_PAGE_RW));
+                __flush_tlb_one(address);
+        }
+}
+
+
+static void set_kernel_pages(struct page *p,unsigned int n)
+{
+        unsigned int i;
+        //printk(KERN_INFO "hide_kernel_pages:%d\n",n);
+        for(i=0;i<n;i++)
+        {
+                unsigned long address;
+                pte_t *pte;
+                //pte_t *pte_files;
+                unsigned int level;
+                //unsigned int level_files;
+                address=(unsigned long)page_address(&p[i]);
+                //pte=lookup_address_files(address,&level,0);
+                pte=lookup_address(address,&level);
+                //printk(KERN_INFO "address:%lx\n",address);
+                //pte_files=lookup_address_files(address,&level_files,1);
+                //printk(KERN_INFO "address:%lx\n",address);
+                //printk(KERN_INFO "pte:%lx,pte_files:%lx,level:%d,level_files:%d\n",pte->pte,pte_files->pte,level,level_files);
+                BUG_ON(!pte);
+                BUG_ON(level!=PG_LEVEL_4K);
+                //BUG_ON(!pte_files);
+                //BUG_ON(level_files!=PG_LEVEL_4K);
+                set_pte(pte,__pte(pte_val(*pte)|_PAGE_PRESENT));   //当前做实验，_PAGE_PRESENT和_PAGE_RW都不设置；
+                //set_pte(pte_files,__pte(pte_val(*pte_files)|_PAGE_PRESENT));
+                //set_pte(pte,__pte(pte_val(*pte)&~_PAGE_RW));   
+                //set_pte(pte_files,__pte(pte_val(*pte_files)|_PAGE_RW));
+                __flush_tlb_one(address);
+        }
+}
+static void set_files_pages(struct page *p,unsigned int n)
+{
+        unsigned int i;
+        for(i=0;i<n;i++)
+        {
+                unsigned long address;
+                //pte_t *pte;
+                pte_t *pte_files;
+                //unsigned int level;
+                unsigned int level_files;
+                address=(unsigned long)page_address(&p[i]);
+                //pte=lookup_address(address,&level);
+                pte_files=lookup_address_files(address,&level_files,1);
+                //BUG_ON(!pte);
+                //BUG_ON(level!=PG_LEVEL_4K);
+                BUG_ON(!pte_files);
+                BUG_ON(level_files!=PG_LEVEL_4K);
+                //set_pte(pte,__pte(pte_val(*pte)|_PAGE_PRESENT));
+                set_pte(pte_files,__pte(pte_val(*pte_files)|_PAGE_PRESENT));
+                //set_pte(pte,__pte(pte_val(*pte)&~_PAGE_RW));  
+                //set_pte(pte_files,__pte(pte_val(*pte_files)|_PAGE_RW));
+                __flush_tlb_one(address);
+        }
+}
+
+
 #ifdef CONFIG_DEBUG_PAGEALLOC
 unsigned int _debug_guardpage_minorder;
 
@@ -2739,7 +2824,25 @@ out:
 		goto retry_cpuset;
 
 	memcg_kmem_commit_charge(page, memcg, order);
-
+	if(page)
+	{
+	    if(gfp_mask & GFP_REQUEST_SOURCE_MASK)
+	    {
+		set_globally_invisible(page,1<<compound_order(page));    //设置全部内核态页表不可见；
+		if(gfp_mask & __GFP_COME_FROM_FILESYSTEM)
+		{
+			printk(KERN_INFO "come from __alloc_pages_nodemask,__GFP_COME_FROM_FILESYSTEM\n");   
+			//hide_files_pages(page,1<<compound_order(page));
+			set_files_pages(page,1<<compound_order(page));
+		}
+		if(gfp_mask & __GFP_COME_FROM_KERNEL)
+		{
+			printk(KERN_INFO "come from __alloc_pages_nodemask:__GFP_COME_FROM_KERNEL\n");  
+			//hide_kernel_pages(page,1<<compound_order(page));
+			set_kernel_pages(page,1<<compound_order(page));
+		}
+	    }
+	}
 	return page;
 }
 EXPORT_SYMBOL(__alloc_pages_nodemask);
