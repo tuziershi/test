@@ -264,8 +264,10 @@ static inline void *get_freepointer(struct kmem_cache *s, void *object)
 	if(!(pte_val(*pte)&_PAGE_PRESENT))
 	{
 		set_pte(pte,__pte(pte_val(*pte)|_PAGE_PRESENT));
+		 __flush_tlb_one((unsigned long)(object+s->offset));
 		p=*(void**)(object+s->offset);
 		set_pte(pte,__pte(pte_val(*pte)&~_PAGE_PRESENT));
+		__flush_tlb_one((unsigned long)(object+s->offset));
 		return p;
 	}
 	//return *(void **)(object + s->offset);
@@ -281,8 +283,10 @@ static void prefetch_freepointer(const struct kmem_cache *s, void *object)
         if(pte&&!(pte_val(*pte)&_PAGE_PRESENT))
         {
                 set_pte(pte,__pte(pte_val(*pte)|_PAGE_PRESENT));
+		__flush_tlb_one((unsigned long)(object+s->offset));
                 prefetch(object + s->offset);
                 set_pte(pte,__pte(pte_val(*pte)&~_PAGE_PRESENT));
+		__flush_tlb_one((unsigned long)(object+s->offset));
         }
         else{
                 prefetch(object + s->offset);
@@ -302,8 +306,11 @@ static inline void *get_freepointer_safe(struct kmem_cache *s, void *object)
 	if(!(pte_val(*pte)&_PAGE_PRESENT))
         {
                 set_pte(pte,__pte(pte_val(*pte)|_PAGE_PRESENT));
+		__flush_tlb_one((unsigned long)(object+s->offset));
                 probe_kernel_read(&p, (void **)(object + s->offset), sizeof(p));
                 set_pte(pte,__pte(pte_val(*pte)&~_PAGE_PRESENT));
+		__flush_tlb_one((unsigned long)(object+s->offset));
+
                 //return p;
         }
 	else{
@@ -324,8 +331,11 @@ static inline void set_freepointer(struct kmem_cache *s, void *object, void *fp)
 	if(!(pte_val(*pte)&_PAGE_PRESENT))
         {
                 set_pte(pte,__pte(pte_val(*pte)|_PAGE_PRESENT));
+		__flush_tlb_one((unsigned long)(object+s->offset));
                 *(void **)(object + s->offset) = fp;
                 set_pte(pte,__pte(pte_val(*pte)&~_PAGE_PRESENT));
+		__flush_tlb_one((unsigned long)(object+s->offset));
+
         }
 	else{
 		*(void **)(object + s->offset) = fp;
@@ -2623,8 +2633,10 @@ redo:
         	if(!(pte_val(*pte)&_PAGE_PRESENT))
         	{
                 	set_pte(pte,__pte(pte_val(*pte)|_PAGE_PRESENT));
+			__flush_tlb_one((unsigned long)object);
                 	memset(object, 0, s->object_size);
                 	set_pte(pte,__pte(pte_val(*pte)&~_PAGE_PRESENT));
+			__flush_tlb_one((unsigned long)object);
         	}
         	else{
                		memset(object, 0, s->object_size);

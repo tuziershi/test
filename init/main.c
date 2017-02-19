@@ -848,9 +848,9 @@ static int try_to_run_init_process(const char *init_filename)
 static noinline void __init kernel_init_freeable(void);
 static int files(void *unused)
 {
-    //unsigned long address;
-    //unsigned int level;
-    //pte_t *pte;
+    unsigned long address;
+    unsigned int level;
+    pte_t *pte;
     int time_count=0;
     unsigned char *buffer;
     unsigned char *buffer1;
@@ -860,15 +860,23 @@ static int files(void *unused)
 	  //load_cr3(swapper_pg_dir);
 	  printk(KERN_INFO "before kmalloc%d\n",time_count);
 	  buffer=(unsigned char*)kmalloc(8,__GFP_COME_FROM_FILESYSTEM);
-	  //address=(unsigned long)buffer&PAGE_MASK;
-	  //pte=lookup_address(address,&level);
-	  //printk(KERN_INFO "COME FROM FILES:address:%lx,pte:%lx,level:%d,bit:%lu\n",address,pte->pte,level,pte_val(*pte)&_PAGE_PRESENT);
-	  buffer[0]='a';
-	  printk(KERN_INFO "after kmalloc%d\n",time_count);
+	  address=(unsigned long)buffer&PAGE_MASK;
+	  pte=lookup_address(address,&level);
+	  //printk(KERN_INFO "COME FROM FILES:address:%lx,pte:%lx,level:%d %lx\n",address,pte->pte,level,pte_val(*pte)&_PAGE_PRESENT);
+	  //*buffer='a';
+	//pte=lookup_address(address,&level);
+	  printk(KERN_INFO "after kmalloc%d buffer:%lx,address:%lx,pte:%lx,level:%d %lx\n",time_count,(unsigned long)buffer,address,pte->pte,level,pte_val(*pte)&_PAGE_PRESENT);
 	  buffer1=(unsigned char*)__get_free_pages(__GFP_COME_FROM_FILESYSTEM,1);
-	  buffer1[0]='a';
+	address=(unsigned long)buffer1&PAGE_MASK;
+          pte=lookup_address(address,&level);
+	printk(KERN_INFO "BUFFER1:%lx\n",pte_val(*pte)&_PAGE_PRESENT);
+	  //*buffer1='a';
+	//pte=lookup_address(address,&level);
+	//printk(KERN_INFO "BUFFER1:%lx\n",pte_val(*pte)&_PAGE_PRESENT);
 	  load_cr3(swapper_pg_dir_files);
-	  printk(KERN_INFO "after load_cr3%d\n",time_count);
+	*buffer='a';
+	*buffer1='b';
+	  printk(KERN_INFO "after load_cr3%d buffer1:%lx\n",time_count,(unsigned long)buffer1);
           //printk(KERN_INFO "thread_function:%d  times,swapper_pg_dir:%p,swapper_pg_dir_files:%p,current:%p %p, thread_name:%s,buffer:%p\n",time_count,swapper_pg_dir,swapper_pg_dir_files,current->mm,current->active_mm->pgd,current->comm,buffer);
 	 printk(KERN_INFO "after printk");
 	  time_count++;
