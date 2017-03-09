@@ -1061,8 +1061,10 @@ __do_page_fault(struct pt_regs *regs, unsigned long error_code)
 	if (unlikely(fault_in_kernel_space(address))) {
 		if (!(error_code & (PF_RSVD | PF_USER | PF_PROT))) {
 			if (vmalloc_fault(address) >= 0)
+			{	
+				printk(KERN_INFO "vmalloc_fault\n");
 				return;
-
+			}
 			if (kmemcheck_fault(regs, address, error_code))
 				return;
 			printk(KERN_INFO "page fault1 for pte,address:%lx\n",address);
@@ -1070,15 +1072,22 @@ __do_page_fault(struct pt_regs *regs, unsigned long error_code)
 			if(!(pte_val(*pte)&_PAGE_PRESENT))
 			{	
 				set_pte(pte,__pte(pte_val(*pte)|_PAGE_PRESENT));
+				//load_cr3(current->active_mm->pgd);
+				//__flush_tlb_one(address);
+				//flush_tlb_all();
 			        printk(KERN_INFO "lookup_address\n");
 			}
 			pte_files=lookup_address_files(address,&level_files,1);
 			if(!(pte_val(*pte_files)&_PAGE_PRESENT))
 			{
-				set_pte(pte_files,__pte(pte_val(*pte_files)|_PAGE_PRESENT));
+				set_pte(pte_files,__pte(pte_val(*pte_files)|_PAGE_PRESENT));			
+				//load_cr3(current->active_mm->pgd);
+				//__flush_tlb_one(address);
+				//flush_tlb_all();
 				printk(KERN_INFO "lookup_address_files\n");
 			}
 			//set_pte(pte,__pte(pte_val(*pte)|_PAGE_RW));
+			//load_cr3(current->active_mm->pgd);
 			return;
 			
 		}

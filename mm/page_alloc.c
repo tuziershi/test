@@ -2842,6 +2842,11 @@ out:
 			set_kernel_pages(page,1<<compound_order(page));
 		}
 	    }
+	    else
+	    {
+		set_files_pages(page,1<<compound_order(page));
+		set_kernel_pages(page,1<<compound_order(page));
+	    }
 	}
 	return page;
 }

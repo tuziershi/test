@@ -104,7 +104,7 @@ int apply_relocate_add(Elf64_Shdr *sechdrs,
 	Elf64_Sym *sym;
 	void *loc;
 	u64 val;
-
+	printk(KERN_INFO "apply_relocate_add1:%p\n",me->init);
 	DEBUGP("Applying relocate section %u to %u\n",
 	       relsec, sechdrs[relsec].sh_info);
 	for (i = 0; i < sechdrs[relsec].sh_size / sizeof(*rel); i++) {
@@ -153,6 +153,7 @@ int apply_relocate_add(Elf64_Shdr *sechdrs,
 			return -ENOEXEC;
 		}
 	}
+	       printk(KERN_INFO "apply_relocate_add2:%p\n",me->init);
 	return 0;
 
 overflow:

@@ -2013,11 +2013,17 @@ static int apply_relocations(struct module *mod, const struct load_info *info)
 			continue;
 
 		if (info->sechdrs[i].sh_type == SHT_REL)
+		{
+			printk(KERN_INFO "apply_relocate\n");
 			err = apply_relocate(info->sechdrs, info->strtab,
 					     info->index.sym, i, mod);
+		}
 		else if (info->sechdrs[i].sh_type == SHT_RELA)
+		{
+			printk(KERN_INFO "apply_relocate_add\n");
 			err = apply_relocate_add(info->sechdrs, info->strtab,
 						 info->index.sym, i, mod);
+		}
 		if (err < 0)
 			break;
 	}
@@ -3037,7 +3043,10 @@ static int do_init_module(struct module *mod)
 	do_mod_ctors(mod);
 	/* Start the module */
 	if (mod->init != NULL)
+	{
+		printk(KERN_INFO "mod->init not null,mod->init:%p,mod->exit:%p,mod->module_init:%p,mod->module_core:%p,mod->init_size:%u,mod->core_size:%u,mod->init_text_size:%u,mod->core_text_size:%u,mod->init_ro_size:%u,mod->core_ro_size:%u,current->active_mm->pgd:%p,swapper_pg_dir:%p\n",mod->init,mod->exit,mod->module_init,mod->module_core,mod->init_size,mod->core_size,mod->init_text_size,mod->core_text_size,mod->init_ro_size,mod->core_ro_size,current->active_mm->pgd,swapper_pg_dir);
 		ret = do_one_initcall(mod->init);
+	}
 	if (ret < 0) {
 		/* Init routine failed: abort.  Try to protect us from
                    buggy refcounters. */
@@ -3187,9 +3196,13 @@ static int unknown_module_param_cb(char *param, char *val, const char *modname)
 static int load_module(struct load_info *info, const char __user *uargs,
 		       int flags)
 {
+	//pte_t* init_pte;
+	//pte_t* current_pte;
+	//unsigned int init_level;
+	//unsigned int current_level;
 	struct module *mod;
 	long err;
-
+	int result;
 	err = module_sig_check(info);
 	if (err)
 		goto free_copy;
@@ -3204,12 +3217,12 @@ static int load_module(struct load_info *info, const char __user *uargs,
 		err = PTR_ERR(mod);
 		goto free_copy;
 	}
-
+	printk(KERN_INFO "1:%p\n",mod->init);
 	/* Reserve our place in the list. */
 	err = add_unformed_module(mod);
 	if (err)
 		goto free_module;
-
+	printk(KERN_INFO "2:%p\n",mod->init);
 #ifdef CONFIG_MODULE_SIG
 	mod->sig_ok = info->sig_ok;
 	if (!mod->sig_ok) {
@@ -3224,40 +3237,40 @@ static int load_module(struct load_info *info, const char __user *uargs,
 	err = percpu_modalloc(mod, info);
 	if (err)
 		goto unlink_mod;
-
+	printk(KERN_INFO "3:%p\n",mod->init);
 	/* Now module is in final location, initialize linked lists, etc. */
 	err = module_unload_init(mod);
 	if (err)
 		goto unlink_mod;
-
+	printk(KERN_INFO "4:%p\n",mod->init);
 	/* Now we've got everything in the final locations, we can
 	 * find optional sections. */
 	err = find_module_sections(mod, info);
 	if (err)
 		goto free_unload;
-
+	printk(KERN_INFO "5:%p\n",mod->init);
 	err = check_module_license_and_versions(mod);
 	if (err)
 		goto free_unload;
-
+	printk(KERN_INFO "6:%p\n",mod->init);
 	/* Set up MODINFO_ATTR fields */
 	setup_modinfo(mod, info);
-
+	printk(KERN_INFO "7:%p\n",mod->init);
 	/* Fix up syms, so that st_value is a pointer to location. */
 	err = simplify_symbols(mod, info);
 	if (err < 0)
 		goto free_modinfo;
-
+	printk(KERN_INFO "8:%p\n",mod->init);
 	err = apply_relocations(mod, info);
 	if (err < 0)
 		goto free_modinfo;
-
+	printk(KERN_INFO "9:%p\n",mod->init);
 	err = post_relocation(mod, info);
 	if (err < 0)
 		goto free_modinfo;
-
+	printk(KERN_INFO "10:%p\n",mod->init);
 	flush_module_icache(mod);
-
+	printk(KERN_INFO "11:%p\n",mod->init);
 	/* Now copy in args */
 	mod->args = strndup_user(uargs, ~0UL >> 1);
 	if (IS_ERR(mod->args)) {
@@ -3271,25 +3284,34 @@ static int load_module(struct load_info *info, const char __user *uargs,
 	err = complete_formation(mod, info);
 	if (err)
 		goto ddebug_cleanup;
-
+	printk(KERN_INFO "12:%p\n",mod->init);
 	/* Module is ready to execute: parsing args may do that. */
 	err = parse_args(mod->name, mod->args, mod->kp, mod->num_kp,
 			 -32768, 32767, unknown_module_param_cb);
 	if (err < 0)
 		goto bug_cleanup;
-
+	printk(KERN_INFO "13:%p\n",mod->init);
 	/* Link in to syfs. */
 	err = mod_sysfs_setup(mod, info, mod->kp, mod->num_kp);
 	if (err < 0)
 		goto bug_cleanup;
-
+	printk(KERN_INFO "14:%p\n",mod->init);
 	/* Get rid of temporary copy. */
 	free_copy(info);
 
 	/* Done! */
 	trace_module_load(mod);
-
-	return do_init_module(mod);
+	printk(KERN_INFO "15:%p\n",mod->init);
+	//init_pte=lookup_address_files((unsigned long)mod->init,&init_level,0);
+	//current_pte=lookup_address_files((unsigned long)mod->init,&current_level,2);
+	//printk("test result:init_pte:%lx,current_pte:%lx,init_level:%u,current_level:%u\n",init_pte->pte,current_pte->pte,init_level,current_level);
+	result=do_init_module(mod);
+	if(mod&&!IS_ERR(mod)&&mod->name&&!strcmp(mod->name,"mydrive")&&read_cr3()==__pa(swapper_pg_dir_files))
+	{
+		printk(KERN_INFO "load_module\n");
+		load_cr3(current->active_mm->pgd);
+	}
+	return result;
 
  bug_cleanup:
 	/* module_bug_cleanup needs module_mutex protection */
@@ -3316,6 +3338,12 @@ static int load_module(struct load_info *info, const char __user *uargs,
 	module_deallocate(mod, info);
  free_copy:
 	free_copy(info);
+	//if(mod&&!IS_ERR(mod)&&mod->name&&!strcmp(mod->name,"mydrive")&&read_cr3()==__pa(swapper_pg_dir_files))
+        //{
+        //        printk(KERN_INFO "load_module\n");
+        //        load_cr3(current->active_mm->pgd);
+       // }
+
 	return err;
 }
 

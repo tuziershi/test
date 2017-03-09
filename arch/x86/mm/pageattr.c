@@ -377,7 +377,12 @@ pte_t *lookup_address_files(unsigned long address, unsigned int *level,int i)
         {
                 pgd = swapper_pg_dir_files+pgd_index(address);
         }
-        *level = PG_LEVEL_NONE;
+	//else if(i==2)
+        //{
+	//	printk(KERN_INFO "lookup_address_files:%p",current->active_mm->pgd);
+	//	pgd=current->active_mm->pgd;
+	//}
+	*level = PG_LEVEL_NONE;
 
         if (pgd_none(*pgd))
                 return NULL;
