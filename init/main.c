@@ -942,7 +942,7 @@ static noinline void __init kernel_init_freeable(void)
 	 * Wait until kthreadd is all set-up.
 	 */
 	wait_for_completion(&kthreadd_done);
-	kthread_run(files,NULL,"mythread%d",1);
+	//kthread_run(files,NULL,"mythread%d",1);
 
 	/* Now the scheduler is fully set up and can do blocking allocations */
 	gfp_allowed_mask = __GFP_BITS_MASK;

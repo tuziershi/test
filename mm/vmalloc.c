@@ -95,8 +95,11 @@ static void vunmap_pud_range(pgd_t *pgd, unsigned long addr, unsigned long end)
 static void vunmap_page_range(unsigned long addr, unsigned long end)
 {
 	pgd_t *pgd;
+	pgd_t *pgd_files;
 	unsigned long next;
-
+	unsigned long next1;
+	unsigned long addr1=addr;
+	unsigned long end1=end;
 	BUG_ON(addr >= end);
 	pgd = pgd_offset_k(addr);
 	do {
@@ -105,7 +108,34 @@ static void vunmap_page_range(unsigned long addr, unsigned long end)
 			continue;
 		vunmap_pud_range(pgd, addr, next);
 	} while (pgd++, addr = next, addr != end);
+	if(addr>=MODULES_VADDR&&addr<MODULES_END){
+        pgd_files = swapper_pg_dir_files+pgd_index(addr);
+        do {
+                next1 = pgd_addr_end(addr1, end1);
+                if (pgd_none_or_clear_bad(pgd_files))
+                        continue;
+                vunmap_pud_range(pgd_files, addr1, next1);
+        } while (pgd_files++, addr1 = next1, addr1 != end1);
+	}
+
+	
 }
+
+//static void vunmap_page_range_files(unsigned long addr, unsigned long end)
+//{
+//        pgd_t *pgd;
+//        unsigned long next;
+//
+//        BUG_ON(addr >= end);
+//        pgd = swapper_pg_dir_files+pgd_index(addr);
+//        do {
+//                next = pgd_addr_end(addr, end);
+//                if (pgd_none_or_clear_bad(pgd))
+//                        continue;
+//                vunmap_pud_range(pgd, addr, next);
+//        } while (pgd++, addr = next, addr != end);
+//}
+
 
 static int vmap_pte_range(pmd_t *pmd, unsigned long addr,
 		unsigned long end, pgprot_t prot, struct page **pages, int *nr)
@@ -133,6 +163,39 @@ static int vmap_pte_range(pmd_t *pmd, unsigned long addr,
 	return 0;
 }
 
+static int vmap_pte_range_files(pmd_t *pmd, unsigned long addr,
+                unsigned long end, pgprot_t prot, struct page **pages, int *nr)
+{
+        pte_t *pte;
+
+        /*
+         * nr is a running index into the array which helps higher level
+         * callers keep track of where we're up to.
+         */
+
+        pte = pte_alloc_kernel(pmd, addr);
+        if (!pte)
+	{
+		printk(KERN_INFO "pte files 1\n");
+                return -ENOMEM;
+       	}
+	do {
+                struct page *page = pages[*nr];
+
+                if (WARN_ON(!pte_none(*pte)))
+                        return -EBUSY;
+		printk(KERN_INFO "pte file,page:%p\n",page);
+                if (WARN_ON(!page))
+		{
+			 printk(KERN_INFO "pte files 2\n");
+                        return -ENOMEM;
+		}
+                set_pte_at(&init_mm, addr, pte, mk_pte(page, prot));
+                (*nr)++;
+        } while (pte++, addr += PAGE_SIZE, addr != end);
+        return 0;
+}
+
 static int vmap_pmd_range(pud_t *pud, unsigned long addr,
 		unsigned long end, pgprot_t prot, struct page **pages, int *nr)
 {
@@ -150,6 +213,27 @@ static int vmap_pmd_range(pud_t *pud, unsigned long addr,
 	return 0;
 }
 
+static int vmap_pmd_range_files(pud_t *pud, unsigned long addr,
+                unsigned long end, pgprot_t prot, struct page **pages, int *nr)
+{
+        pmd_t *pmd;
+        unsigned long next;
+
+        pmd = pmd_alloc(&init_mm, pud, addr);
+        if (!pmd)
+	{
+		 printk(KERN_INFO "pmd files 1\n");
+                return -ENOMEM;
+        }
+	do {
+                next = pmd_addr_end(addr, end);
+                if (vmap_pte_range_files(pmd, addr, next, prot, pages, nr))
+                        return -ENOMEM;
+        } while (pmd++, addr = next, addr != end);
+        return 0;
+}
+
+
 static int vmap_pud_range(pgd_t *pgd, unsigned long addr,
 		unsigned long end, pgprot_t prot, struct page **pages, int *nr)
 {
@@ -166,6 +250,27 @@ static int vmap_pud_range(pgd_t *pgd, unsigned long addr,
 	} while (pud++, addr = next, addr != end);
 	return 0;
 }
+
+static int vmap_pud_range_files(pgd_t *pgd, unsigned long addr,
+                unsigned long end, pgprot_t prot, struct page **pages, int *nr)
+{
+        pud_t *pud;
+        unsigned long next;
+
+        pud = pud_alloc(&init_mm, pgd, addr);
+        if (!pud)
+	{
+		 printk(KERN_INFO "pud files 1\n");
+                return -ENOMEM;
+        }
+	do {
+                next = pud_addr_end(addr, end);
+                if (vmap_pmd_range_files(pud, addr, next, prot, pages, nr))
+                        return -ENOMEM;
+        } while (pud++, addr = next, addr != end);
+        return 0;
+}
+
 
 /*
  * Set up page tables in kva (addr, end). The ptes shall have prot "prot", and
@@ -188,19 +293,46 @@ static int vmap_page_range_noflush(unsigned long start, unsigned long end,
 		next = pgd_addr_end(addr, end);
 		err = vmap_pud_range(pgd, addr, next, prot, pages, &nr);
 		if (err)
-			return err;
+                        return err;
 	} while (pgd++, addr = next, addr != end);
 
 	return nr;
+}
+
+static int vmap_page_range_noflush_files(unsigned long start, unsigned long end,
+                                   pgprot_t prot, struct page **pages)
+{
+        pgd_t *pgd;
+        unsigned long next;
+        unsigned long addr = start;
+        int err = 0;
+        int nr = 0;
+
+        BUG_ON(addr >= end);
+        pgd = swapper_pg_dir_files + pgd_index(addr);
+        do {
+                next = pgd_addr_end(addr, end);
+       		err = vmap_pud_range_files(pgd, addr, next, prot, pages, &nr);
+                if(err)
+                	return err;
+        } while (pgd++, addr = next, addr != end);
+
+        return nr;
 }
 
 static int vmap_page_range(unsigned long start, unsigned long end,
 			   pgprot_t prot, struct page **pages)
 {
 	int ret;
+	int ret1;
 
 	ret = vmap_page_range_noflush(start, end, prot, pages);
 	flush_cache_vmap(start, end);
+	if(start>=MODULES_VADDR && start<MODULES_END)
+	{
+		ret1=vmap_page_range_noflush_files(start,end,__pgprot(pgprot_val(prot)|_PAGE_PRESENT),pages);
+		printk(KERN_INFO "VMAP_PAGE_RANGE:%d",ret1);
+	}
 	return ret;
 }
 
@@ -519,7 +651,13 @@ static void free_vmap_area(struct vmap_area *va)
 static void unmap_vmap_area(struct vmap_area *va)
 {
 	vunmap_page_range(va->va_start, va->va_end);
+	//if(va->va_start>=MODULES_VADDR&&va->va_start<MODULES_END)
+	//{
+	//	vunmap_page_range_files(va->start,va->va_end);
+	//}
 }
+
+
 
 static void vmap_debug_free_range(unsigned long start, unsigned long end)
 {
@@ -537,6 +675,10 @@ static void vmap_debug_free_range(unsigned long start, unsigned long end)
 	 * faster).
 	 */
 #ifdef CONFIG_DEBUG_PAGEALLOC
+	//if(va->va_start>=MODULES_VADDR&&va->va_start<MODULES_END)
+        //        vunmap_page_range_files(va->start,va->va_end);
+        //}
+
 	vunmap_page_range(start, end);
 	flush_tlb_kernel_range(start, end);
 #endif

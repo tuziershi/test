@@ -140,6 +140,7 @@ static void __init copy_bootdata(char *real_mode_data)
 asmlinkage void __init x86_64_start_kernel(char * real_mode_data)
 {
 	int i;
+	pgd_t* pgd;
 
 	/*
 	 * Build-time sanity checks on the kernel image and module
@@ -179,7 +180,9 @@ asmlinkage void __init x86_64_start_kernel(char * real_mode_data)
 	clear_page(init_level4_pgt_files);
 	/* set init_level4_pgt kernel high mapping*/
 	init_level4_pgt[511] = early_level4_pgt[511];
- 	init_level4_pgt_files[511]=early_level4_pgt[511];
+	pgd=init_level4_pgt_files+511;
+	set_pgd(pgd,__pgd(_PAGE_TABLE|__pa(level3_kernel_pgt_files)));
+ 	//init_level4_pgt_files[511]=early_level4_pgt[511];
 	x86_64_start_reservations(real_mode_data);
 }
 

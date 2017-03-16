@@ -92,6 +92,8 @@ startup_64:
 
 	addq	%rbp, level3_kernel_pgt + (510*8)(%rip)
 	addq	%rbp, level3_kernel_pgt + (511*8)(%rip)
+	
+	addq    %rbp, level3_kernel_pgt_files + (510*8)(%rip)	
 
 	addq	%rbp, level2_fixmap_pgt + (506*8)(%rip)
 
@@ -462,7 +464,8 @@ NEXT_PAGE(init_level4_pgt)
 	.quad   level3_kernel_pgt - __START_KERNEL_map + _PAGE_TABLE
 
 NEXT_PAGE(init_level4_pgt_files)
-	.fill	512,8,0
+	.fill	511,8,0
+	.quad   level3_kernel_pgt_files - __START_KERNEL_map + _PAGE_TABLE
 
 NEXT_PAGE(level3_ident_pgt)
 	.quad	level2_ident_pgt - __START_KERNEL_map + _KERNPG_TABLE
@@ -479,6 +482,12 @@ NEXT_PAGE(level3_kernel_pgt)
 	/* (2^48-(2*1024*1024*1024)-((2^39)*511))/(2^30) = 510 */
 	.quad	level2_kernel_pgt - __START_KERNEL_map + _KERNPG_TABLE
 	.quad	level2_fixmap_pgt - __START_KERNEL_map + _PAGE_TABLE
+
+NEXT_PAGE(level3_kernel_pgt_files)
+        .fill   L3_START_KERNEL,8,0
+        /* (2^48-(2*1024*1024*1024)-((2^39)*511))/(2^30) = 510 */
+        .quad   level2_kernel_pgt - __START_KERNEL_map + _KERNPG_TABLE
+        .fill	1,8,0
 
 NEXT_PAGE(level2_kernel_pgt)
 	/*

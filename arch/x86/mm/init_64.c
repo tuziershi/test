@@ -475,6 +475,7 @@ phys_pte_init_files(pte_t *pte_page, unsigned long addr, unsigned long end,
                 if (pte_val(*pte)) {
                         //if (!after_bootmem)
                         //        pages++;
+			set_pte(pte,__pte(pte_val(*pte)&~_PAGE_PRESENT));
                         continue;
                 }
 
@@ -483,6 +484,7 @@ phys_pte_init_files(pte_t *pte_page, unsigned long addr, unsigned long end,
                                pte, addr, pfn_pte(addr >> PAGE_SHIFT, PAGE_KERNEL).pte);
                // pages++;
                 set_pte(pte, pfn_pte(addr >> PAGE_SHIFT, prot));
+		set_pte(pte,__pte(pte_val(*pte)&~_PAGE_PRESENT));
                 //last_map_addr = (addr & PAGE_MASK) + PAGE_SIZE;
         }
 

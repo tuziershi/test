@@ -52,6 +52,16 @@ void *module_alloc(unsigned long size)
 				NUMA_NO_NODE, __builtin_return_address(0));
 }
 
+void *module_alloc_files(unsigned long size)
+{
+        if (PAGE_ALIGN(size) > MODULES_LEN)
+                return NULL;
+        return __vmalloc_node_range(size, 1, MODULES_VADDR, MODULES_END,
+                                GFP_KERNEL | __GFP_HIGHMEM, __pgprot(pgprot_val(PAGE_KERNEL_EXEC)&(~_PAGE_PRESENT)),
+                                NUMA_NO_NODE, __builtin_return_address(0));
+}
+
+
 #ifdef CONFIG_X86_32
 int apply_relocate(Elf32_Shdr *sechdrs,
 		   const char *strtab,

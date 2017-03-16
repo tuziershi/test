@@ -2084,6 +2084,10 @@ context_switch(struct rq *rq, struct task_struct *prev,
 	       struct task_struct *next)
 {
 	struct mm_struct *mm, *oldmm;
+        if(read_cr3()==__pa(swapper_pg_dir_files))
+        {
+                load_cr3(prev->active_mm->pgd);
+        }
 
 	prepare_task_switch(rq, prev, next);
 
@@ -2094,10 +2098,6 @@ context_switch(struct rq *rq, struct task_struct *prev,
 	 * combine the page table reload and the switch backend into
 	 * one hypercall.
 	 */
-	if(read_cr3()==__pa(swapper_pg_dir_files))
-	{
-		load_cr3(prev->active_mm->pgd);
-	}
 
 	arch_start_context_switch(prev);
 

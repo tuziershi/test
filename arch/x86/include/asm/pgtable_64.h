@@ -15,6 +15,7 @@
 #include <linux/threads.h>
 
 extern pud_t level3_kernel_pgt[512];
+extern pud_t level3_kernel_pgt_files[512];
 extern pud_t level3_ident_pgt[512];
 extern pmd_t level2_kernel_pgt[512];
 extern pmd_t level2_fixmap_pgt[512];
