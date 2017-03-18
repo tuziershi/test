@@ -377,7 +377,11 @@ static noinline __kprobes int vmalloc_fault(unsigned long address)
 	 * case just flush:
 	 */
 	if(read_cr3()==__pa(swapper_pg_dir_files))
+	{	
+	//	load_cr3(current->active_mm->pgd);
+		return 0;
 		pgd=swapper_pg_dir_files+pgd_index(address);
+	}
 	else
 		pgd = pgd_offset(current->active_mm, address);
 	pgd_ref = pgd_offset_k(address);
@@ -1022,9 +1026,9 @@ static void __kprobes
 __do_page_fault(struct pt_regs *regs, unsigned long error_code)
 {
 	unsigned int level;
-	unsigned int level_files;
+//	unsigned int level_files;
 	pte_t* pte;
-	pte_t* pte_files;
+//	pte_t* pte_files;
 	struct vm_area_struct *vma;
 	struct task_struct *tsk;
 	unsigned long address;
@@ -1069,6 +1073,12 @@ __do_page_fault(struct pt_regs *regs, unsigned long error_code)
 			if (kmemcheck_fault(regs, address, error_code))
 				return;
 			printk(KERN_INFO "page fault1 for pte,address:%lx\n",address);
+			if(read_cr3()==__pa(swapper_pg_dir_files))
+			{
+				load_cr3(current->active_mm->pgd);
+				 __flush_tlb_one(address);
+				return;
+			}
 			pte=lookup_address(address,&level);
 			if(!pte||!(pte_val(*pte)&_PAGE_PRESENT))
 			{	
@@ -1079,18 +1089,18 @@ __do_page_fault(struct pt_regs *regs, unsigned long error_code)
 			        printk(KERN_INFO "lookup_address\n");
 				return;
 			}
-			pte_files=lookup_address_files(address,&level_files,1);
-			if(!(pte_val(*pte_files)&_PAGE_PRESENT))
-			{
-				set_pte(pte_files,__pte(pte_val(*pte_files)|_PAGE_PRESENT));			
-				//load_cr3(current->active_mm->pgd);
-				//__flush_tlb_one(address);
-				//flush_tlb_all();
-				printk(KERN_INFO "lookup_address_files\n");
-			}
+			//pte_files=lookup_address_files(address,&level_files,1);
+			//if(!(pte_val(*pte_files)&_PAGE_PRESENT))
+			//{
+				//set_pte(pte_files,__pte(pte_val(*pte_files)|_PAGE_PRESENT));			
+			//load_cr3(current->active_mm->pgd);
+			//__flush_tlb_one(address);
+			//flush_tlb_all();
+			//printk(KERN_INFO "lookup_address_files\n");
+			//}
 			//set_pte(pte,__pte(pte_val(*pte)|_PAGE_RW));
 			//load_cr3(current->active_mm->pgd);
-			return;
+			//return;
 			
 		}
 
@@ -1285,6 +1295,7 @@ dotraplinkage void __kprobes
 do_page_fault(struct pt_regs *regs, unsigned long error_code)
 {
 	enum ctx_state prev_state;
+
 
 	prev_state = exception_enter();
 	__do_page_fault(regs, error_code);

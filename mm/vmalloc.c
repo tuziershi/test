@@ -176,7 +176,7 @@ static int vmap_pte_range_files(pmd_t *pmd, unsigned long addr,
         pte = pte_alloc_kernel(pmd, addr);
         if (!pte)
 	{
-		printk(KERN_INFO "pte files 1\n");
+		//printk(KERN_INFO "pte files 1\n");
                 return -ENOMEM;
        	}
 	do {
@@ -184,10 +184,10 @@ static int vmap_pte_range_files(pmd_t *pmd, unsigned long addr,
 
                 if (WARN_ON(!pte_none(*pte)))
                         return -EBUSY;
-		printk(KERN_INFO "pte file,page:%p\n",page);
+		//printk(KERN_INFO "pte file,page:%p\n",page);
                 if (WARN_ON(!page))
 		{
-			 printk(KERN_INFO "pte files 2\n");
+			// printk(KERN_INFO "pte files 2\n");
                         return -ENOMEM;
 		}
                 set_pte_at(&init_mm, addr, pte, mk_pte(page, prot));
@@ -331,7 +331,7 @@ static int vmap_page_range(unsigned long start, unsigned long end,
 	if(start>=MODULES_VADDR && start<MODULES_END)
 	{
 		ret1=vmap_page_range_noflush_files(start,end,__pgprot(pgprot_val(prot)|_PAGE_PRESENT),pages);
-		printk(KERN_INFO "VMAP_PAGE_RANGE:%d",ret1);
+		//printk(KERN_INFO "VMAP_PAGE_RANGE:%d",ret1);
 	}
 	return ret;
 }

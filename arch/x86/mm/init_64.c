@@ -182,6 +182,8 @@ __setup("noexec32=", nonx32_setup);
 void sync_global_pgds(unsigned long start, unsigned long end)
 {
 	unsigned long address;
+	pgd_t *pgd_files;
+	spinlock_t *pgt_lock_files;
 
 	for (address = start; address <= end; address += PGDIR_SIZE) {
 		const pgd_t *pgd_ref = pgd_offset_k(address);
@@ -207,6 +209,21 @@ void sync_global_pgds(unsigned long start, unsigned long end)
 				       != pgd_page_vaddr(*pgd_ref));
 
 			spin_unlock(pgt_lock);
+		}
+		if((address>=0xffffea0000000000&&address<0xffffeaffffffffff)||(address>=0xffffc90000000000&&address<0xffffe8ffffffffff))
+                {
+			pgd_files = (pgd_t *)swapper_pg_dir_files + pgd_index(address);
+                	/* the pgt_lock only for Xen */
+                	pgt_lock_files = &init_mm.page_table_lock;
+                	spin_lock(pgt_lock_files);
+
+                	if (pgd_none(*pgd_files))
+                        	set_pgd(pgd_files, *pgd_ref);
+                	else
+                        	BUG_ON(pgd_page_vaddr(*pgd_files)
+                               		!= pgd_page_vaddr(*pgd_ref));
+
+                	spin_unlock(pgt_lock_files);
 		}
 		spin_unlock(&pgd_lock);
 	}
@@ -484,7 +501,7 @@ phys_pte_init_files(pte_t *pte_page, unsigned long addr, unsigned long end,
                                pte, addr, pfn_pte(addr >> PAGE_SHIFT, PAGE_KERNEL).pte);
                // pages++;
                 set_pte(pte, pfn_pte(addr >> PAGE_SHIFT, prot));
-		set_pte(pte,__pte(pte_val(*pte)&~_PAGE_PRESENT));
+		//set_pte(pte,__pte(pte_val(*pte)&~_PAGE_PRESENT));
                 //last_map_addr = (addr & PAGE_MASK) + PAGE_SIZE;
         }
 

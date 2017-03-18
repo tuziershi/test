@@ -969,6 +969,8 @@ EXPORT_SYMBOL(try_module_get);
 
 void module_put(struct module *module)
 {
+	pte_t *pte,*pte_files,*pte_current;
+	unsigned int level,level_files,level_current;
 	if (module) {
 		preempt_disable();
 		//if(module->name&&!strcmp(module->name,"mydrive"))
@@ -976,14 +978,28 @@ void module_put(struct module *module)
 		//	load_cr3(current->active_mm->pgd);
 		//	printk(KERN_INFO "module_put\n");
 		//}
-		smp_wmb(); /* see comment in module_refcount */	
+		smp_wmb(); /* see comment in module_refcount */
+		if(module->name&&!strcmp(module->name,"mydrive"))
+                {
+                      printk(KERN_INFO "module_put:%p\n",module->refptr);
+		      pte=lookup_address_files((unsigned long)module->refptr,&level,0);
+		      pte_files=lookup_address_files((unsigned long)module->refptr,&level_files,1);
+		      pte_current=lookup_address_files((unsigned long)module->refptr,&level_current,2);
+		      if(pte)
+		      	printk(KERN_INFO "module_put_pte:%d %lx\n",level,pte->pte);
+                      if(pte_files)
+                        printk(KERN_INFO "module_put_pte_files:%d %lx\n",level_files,pte_files->pte);
+		      if(pte_current)
+		       	printk(KERN_INFO "module_put_pte_current:%d %lx\n",level_current,pte_current->pte);
+		}
+	
 		__this_cpu_inc(module->refptr->decs);
 
 		 if(module->name&&!strcmp(module->name,"mydrive"))
                 {
-                      load_cr3(current->active_mm->pgd);
-                      printk(KERN_INFO "module_put\n");
-                }
+                      //load_cr3(current->active_mm->pgd);
+                      printk(KERN_INFO "module_put:%lx\n",(unsigned long)__this_cpu_ptr(&(module->refptr->decs)));
+   		}
 
 		trace_module_put(module, _RET_IP_);
 		preempt_enable();
@@ -1835,7 +1851,7 @@ void set_all_modules_text_ro(void)
 }
 #else
 static inline void set_section_ro_nx(void *base, unsigned long text_size, unsigned long ro_size, unsigned long total_size) {
-	printk(KERN_INFO "set_section_ro_nx:null operation\n");
+//printk(KERN_INFO "set_section_ro_nx:null operation\n");
  }
 static void unset_module_core_ro_nx(struct module *mod) { }
 static void unset_module_init_ro_nx(struct module *mod) { }
@@ -2027,13 +2043,13 @@ static int apply_relocations(struct module *mod, const struct load_info *info)
 
 		if (info->sechdrs[i].sh_type == SHT_REL)
 		{
-			printk(KERN_INFO "apply_relocate\n");
+		//	printk(KERN_INFO "apply_relocate\n");
 			err = apply_relocate(info->sechdrs, info->strtab,
 					     info->index.sym, i, mod);
 		}
 		else if (info->sechdrs[i].sh_type == SHT_RELA)
 		{
-			printk(KERN_INFO "apply_relocate_add\n");
+		//	printk(KERN_INFO "apply_relocate_add\n");
 			err = apply_relocate_add(info->sechdrs, info->strtab,
 						 info->index.sym, i, mod);
 		}
@@ -3085,9 +3101,29 @@ static void do_mod_ctors(struct module *mod)
 static int do_init_module(struct module *mod)
 {
 	int ret = 0;
-
+	int i;
+	if(mod->name&&!strcmp(mod->name,"mydrive")){
+		for(i=0;i<512;i++)
+		{
+			if(i==272) continue;
+                        swapper_pg_dir_files[i]=swapper_pg_dir[i];
+                }
+	//	for(i=0;i<512;i++)
+	//	{
+	//		printk(KERN_INFO "level3_kernel_pgt[%d]:%lx,level3_kernel_pgt_files[%d]:%lx\n",i,level3_kernel_pgt[i].pud,i,level3_kernel_pgt_files[i].pud);
+	//	}
+	//	for(i=0;i<512;i++)
+	//	{
+	//		printk(KERN_INFO "init_level4_pgt[%d]:%lx,init_level4_pgt_files[%d]:%lx\n",i,init_level4_pgt[i].pgd,i,init_level4_pgt_files[i].pgd);
+	//
+	//	}
+		//for(i=0;i<512;i++)
+		//{
+		//	swapper_pg_dir_files[i]=swapper_pg_dir[i];
+		//}
+	}		
 	/*
-	 * We want to find out whether @mod uses async during init.  Clear
+	 * We want ti find out whether @mod uses async during init.  Clear
 	 * PF_USED_ASYNC.  async_schedule*() will set it.
 	 */
 
@@ -3116,7 +3152,7 @@ static int do_init_module(struct module *mod)
 			printk(KERN_INFO "load swapper_pg_dir_files\n");
 			load_cr3(swapper_pg_dir_files);
 		}
-		printk(KERN_INFO "mod->init not null,mod->init:%p,mod->exit:%p,mod->module_init:%p,mod->module_core:%p,mod->init_size:%u,mod->core_size:%u,mod->init_text_size:%u,mod->core_text_size:%u,mod->init_ro_size:%u,mod->core_ro_size:%u,current->active_mm->pgd:%p,swapper_pg_dir:%p\n",mod->init,mod->exit,mod->module_init,mod->module_core,mod->init_size,mod->core_size,mod->init_text_size,mod->core_text_size,mod->init_ro_size,mod->core_ro_size,current->active_mm->pgd,swapper_pg_dir);
+	//	printk(KERN_INFO "mod->init not null,mod->init:%p,mod->exit:%p,mod->module_init:%p,mod->module_core:%p,mod->init_size:%u,mod->core_size:%u,mod->init_text_size:%u,mod->core_text_size:%u,mod->init_ro_size:%u,mod->core_ro_size:%u,current->active_mm->pgd:%p,swapper_pg_dir:%p\n",mod->init,mod->exit,mod->module_init,mod->module_core,mod->init_size,mod->core_size,mod->init_text_size,mod->core_text_size,mod->init_ro_size,mod->core_ro_size,current->active_mm->pgd,swapper_pg_dir);
 		
 		ret = do_one_initcall(mod->init);
 		if(mod->name&&!strcmp(mod->name,"mydrive")&&read_cr3()==__pa(swapper_pg_dir_files))
@@ -3152,8 +3188,8 @@ static int do_init_module(struct module *mod)
 				     MODULE_STATE_LIVE, mod);
 	  
 
-	if(mod->name&&!strcmp(mod->name,"mydrive"))
-		printk(KERN_INFO "do_init_module1\n");
+	//if(mod->name&&!strcmp(mod->name,"mydrive"))
+	//	printk(KERN_INFO "do_init_module1\n");
 
 	/*
 	 * We need to finish all async code before the module init sequence
@@ -3174,8 +3210,8 @@ static int do_init_module(struct module *mod)
 	 */
 	if (current->flags & PF_USED_ASYNC)
 		async_synchronize_full();
-	if(mod->name&&!strcmp(mod->name,"mydrive"))
-		printk(KERN_INFO "do_init_module2\n");
+	//if(mod->name&&!strcmp(mod->name,"mydrive"))
+	//	printk(KERN_INFO "do_init_module2\n");
 	       //if(mod->name&&!strcmp(mod->name,"mydrive")&&read_cr3()==__pa(swapper_pg_dir_files))
                 //{
                 //        printk(KERN_INFO "do_init_module\n");
@@ -3191,33 +3227,33 @@ static int do_init_module(struct module *mod)
 
 	/* Drop initial reference. */
 	module_put(mod);
-	if(mod->name&&!strcmp(mod->name,"mydrive"))
-                printk(KERN_INFO "do_init_module3\n");
+	//if(mod->name&&!strcmp(mod->name,"mydrive"))
+        //        printk(KERN_INFO "do_init_module3\n");
 
 	trim_init_extable(mod);
-	    if(mod->name&&!strcmp(mod->name,"mydrive"))
-                printk(KERN_INFO "do_init_module4\n");
+//	    if(mod->name&&!strcmp(mod->name,"mydrive"))
+//                printk(KERN_INFO "do_init_module4\n");
 #ifdef CONFIG_KALLSYMS
 	mod->num_symtab = mod->core_num_syms;
 	mod->symtab = mod->core_symtab;
 	mod->strtab = mod->core_strtab;
 #endif
 	unset_module_init_ro_nx(mod);
-	        if(mod->name&&!strcmp(mod->name,"mydrive"))
-                printk(KERN_INFO "do_init_module5\n");
+//	        if(mod->name&&!strcmp(mod->name,"mydrive"))
+//                printk(KERN_INFO "do_init_module5\n");
 	module_free(mod, mod->module_init);
-	        if(mod->name&&!strcmp(mod->name,"mydrive"))
-                printk(KERN_INFO "do_init_module6\n");
+//	        if(mod->name&&!strcmp(mod->name,"mydrive"))
+  //              printk(KERN_INFO "do_init_module6\n");
 	mod->module_init = NULL;
 	mod->init_size = 0;
 	mod->init_ro_size = 0;
 	mod->init_text_size = 0;
 	mutex_unlock(&module_mutex);
-	if(mod->name&&!strcmp(mod->name,"mydrive"))
-		printk(KERN_INFO "do_init_module7\n");
+//	if(mod->name&&!strcmp(mod->name,"mydrive"))
+//		printk(KERN_INFO "do_init_module7\n");
 	wake_up_all(&module_wq);
-	if(mod->name&&!strcmp(mod->name,"mydrive"))
-		printk(KERN_INFO "do_init_module8\n");
+//	if(mod->name&&!strcmp(mod->name,"mydrive"))
+//		printk(KERN_INFO "do_init_module8\n");
 
 
 	return 0;

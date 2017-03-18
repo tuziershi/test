@@ -521,7 +521,7 @@ static __always_inline void *kmalloc(size_t size, gfp_t flags)
 				return ZERO_SIZE_PTR;
 			if(flags&__GFP_COME_FROM_FILESYSTEM)
 			{
-			    printk(KERN_INFO "come from include/linux/slab.h:kmalloc\n");
+			    //printk(KERN_INFO "come from include/linux/slab.h:kmalloc\n");
 			    return kmem_cache_alloc_trace(kmalloc_caches_files[index],
 					flags, size);
 			}
@@ -533,7 +533,7 @@ static __always_inline void *kmalloc(size_t size, gfp_t flags)
 	}
 	if(flags&__GFP_COME_FROM_FILESYSTEM)
 	{
-		printk(KERN_INFO "come from include/linux/slab.h    :kmalloc\n");
+		//printk(KERN_INFO "come from include/linux/slab.h    :kmalloc\n");
 		return __kmalloc(size, flags);
 	}
 	else

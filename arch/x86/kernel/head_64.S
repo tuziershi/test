@@ -96,7 +96,7 @@ startup_64:
 	addq    %rbp, level3_kernel_pgt_files + (510*8)(%rip)	
 
 	addq	%rbp, level2_fixmap_pgt + (506*8)(%rip)
-
+	addq    %rbp, level2_fixmap_pgt_files + (506*8)(%rip)
 	/*
 	 * Set up the identity mapping for the switchover.  These
 	 * entries should *NOT* have the global bit set!  This also
@@ -464,7 +464,10 @@ NEXT_PAGE(init_level4_pgt)
 	.quad   level3_kernel_pgt - __START_KERNEL_map + _PAGE_TABLE
 
 NEXT_PAGE(init_level4_pgt_files)
-	.fill	511,8,0
+	.quad   level3_ident_pgt - __START_KERNEL_map + _KERNPG_TABLE
+        .org    init_level4_pgt_files + L4_PAGE_OFFSET*8, 0
+        .quad   level3_ident_pgt - __START_KERNEL_map + _KERNPG_TABLE
+        .org    init_level4_pgt_files + L4_START_KERNEL*8, 0
 	.quad   level3_kernel_pgt_files - __START_KERNEL_map + _PAGE_TABLE
 
 NEXT_PAGE(level3_ident_pgt)
@@ -487,7 +490,7 @@ NEXT_PAGE(level3_kernel_pgt_files)
         .fill   L3_START_KERNEL,8,0
         /* (2^48-(2*1024*1024*1024)-((2^39)*511))/(2^30) = 510 */
         .quad   level2_kernel_pgt - __START_KERNEL_map + _KERNPG_TABLE
-        .fill	1,8,0
+        .quad   level2_fixmap_pgt_files - __START_KERNEL_map + _PAGE_TABLE
 
 NEXT_PAGE(level2_kernel_pgt)
 	/*
@@ -503,14 +506,25 @@ NEXT_PAGE(level2_kernel_pgt)
 	PMDS(0, __PAGE_KERNEL_LARGE_EXEC,
 		KERNEL_IMAGE_SIZE/PMD_SIZE)
 
+
 NEXT_PAGE(level2_fixmap_pgt)
 	.fill	506,8,0
 	.quad	level1_fixmap_pgt - __START_KERNEL_map + _PAGE_TABLE
 	/* 8MB reserved for vsyscalls + a 2MB hole = 4 + 1 entries */
 	.fill	5,8,0
 
+NEXT_PAGE(level2_fixmap_pgt_files)
+        .fill   506,8,0
+        .quad   level1_fixmap_pgt - __START_KERNEL_map + _PAGE_TABLE
+        /* 8MB reserved for vsyscalls + a 2MB hole = 4 + 1 entries */
+        .fill   5,8,0
+
 NEXT_PAGE(level1_fixmap_pgt)
 	.fill	512,8,0
+
+/*NEXT_PAGE(level1_fixmap_pgt_files)
+        .fill   512,8,0
+*/
 
 #undef PMDS
 
