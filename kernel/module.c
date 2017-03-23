@@ -134,6 +134,21 @@ static int param_set_bool_enable_only(const char *val,
 		sig_enforce = true;
 	return 0;
 }
+static void hide_kernel_pages(unsigned long address,unsigned long size)
+{
+	unsigned long i;
+	pte_t *pte;
+	unsigned int level;
+	for(i=0;i<size;i=i+PAGE_SIZE)
+	{
+		pte=lookup_address(address+i,&level);
+		BUG_ON(!pte);
+		BUG_ON(level!=PG_LEVEL_4K);
+		set_pte(pte,__pte(pte_val(*pte)&~_PAGE_PRESENT));
+		printk(KERN_INFO "address:%lx,pte:%lx",address+i,pte->pte);
+		__flush_tlb_one(address);
+	}
+}
 
 static const struct kernel_param_ops param_ops_bool_enable_only = {
 	.flags = KERNEL_PARAM_FL_NOARG,
@@ -987,10 +1002,12 @@ void module_put(struct module *module)
 		      pte_current=lookup_address_files((unsigned long)module->refptr,&level_current,2);
 		      if(pte)
 		      	printk(KERN_INFO "module_put_pte:%d %lx\n",level,pte->pte);
-                      if(pte_files)
-                        printk(KERN_INFO "module_put_pte_files:%d %lx\n",level_files,pte_files->pte);
+                     	      if(pte_files)
+                        		printk(KERN_INFO "module_put_pte_files:%d %lx\n",level_files,pte_files->pte);
 		      if(pte_current)
 		       	printk(KERN_INFO "module_put_pte_current:%d %lx\n",level_current,pte_current->pte);
+
+		       load_cr3(current->active_mm->pgd);
 		}
 	
 		__this_cpu_inc(module->refptr->decs);
@@ -2620,6 +2637,7 @@ out:
 
 static void free_copy(struct load_info *info)
 {
+	printk(KERN_INFO "free_copy:%lx\n",(unsigned long)(info->hdr));
 	vfree(info->hdr);
 }
 
@@ -2845,7 +2863,10 @@ static int move_module(struct module *mod, struct load_info *info)
 	//unsigned int file_level;
 	/* Do the allocs. */
 	if(mod->name&&!strcmp(mod->name,"mydrive"))
+	{
 		ptr = module_alloc_update_bounds_files(mod->core_size);
+		load_cr3(swapper_pg_dir_files);
+	}
 	else 
 		ptr=module_alloc_update_bounds(mod->core_size);
 //	if(!strcmp(mod->name,"mydrive"))
@@ -2880,13 +2901,12 @@ static int move_module(struct module *mod, struct load_info *info)
 	kmemleak_not_leak(ptr);
 	if (!ptr)
 		return -ENOMEM;
-
 	memset(ptr, 0, mod->core_size);
 	mod->module_core = ptr;
 
 	if (mod->init_size) {
 		if(mod->name&&!strcmp(mod->name,"mydrive"))
-                	ptr = module_alloc_update_bounds_files(mod->core_size);
+                	ptr = module_alloc_update_bounds_files(mod->init_size);
 		else
 			ptr = module_alloc_update_bounds(mod->init_size);
 		/*
@@ -2926,6 +2946,10 @@ static int move_module(struct module *mod, struct load_info *info)
 		shdr->sh_addr = (unsigned long)dest;
 		pr_debug("\t0x%lx %s\n",
 			 (long)shdr->sh_addr, info->secstrings + shdr->sh_name);
+	}
+	if(mod->name&&!strcmp(mod->name,"mydrive"))
+	{
+		load_cr3(current->active_mm->pgd);
 	}
 
 	return 0;
@@ -3028,8 +3052,10 @@ static struct module *layout_and_allocate(struct load_info *info, int flags)
 	layout_symtab(mod, info);
 
 	/* Allocate and move to the final place */
-	//if(mod->name)
-	//	printk("layout_and_allocate:%s\n",mod->name);
+	if(mod->name&&!strcmp(mod->name,"mydrive"))
+	{
+		printk(KERN_INFO "before move module\n");
+	}
 	err = move_module(mod, info);
 	if (err)
 		return ERR_PTR(err);
@@ -3102,12 +3128,12 @@ static int do_init_module(struct module *mod)
 {
 	int ret = 0;
 	int i;
-	if(mod->name&&!strcmp(mod->name,"mydrive")){
-		for(i=0;i<512;i++)
-		{
-			if(i==272) continue;
-                        swapper_pg_dir_files[i]=swapper_pg_dir[i];
-                }
+	//if(mod->name&&!strcmp(mod->name,"mydrive")){
+	//	for(i=0;i<512;i++)
+	//	{
+	//		if(i==272) continue;
+          //              swapper_pg_dir_files[i]=swapper_pg_dir[i];
+            //    }
 	//	for(i=0;i<512;i++)
 	//	{
 	//		printk(KERN_INFO "level3_kernel_pgt[%d]:%lx,level3_kernel_pgt_files[%d]:%lx\n",i,level3_kernel_pgt[i].pud,i,level3_kernel_pgt_files[i].pud);
@@ -3121,7 +3147,7 @@ static int do_init_module(struct module *mod)
 		//{
 		//	swapper_pg_dir_files[i]=swapper_pg_dir[i];
 		//}
-	}		
+	//}		
 	/*
 	 * We want ti find out whether @mod uses async during init.  Clear
 	 * PF_USED_ASYNC.  async_schedule*() will set it.
@@ -3149,8 +3175,10 @@ static int do_init_module(struct module *mod)
 	{
 		if(mod->name&&!strcmp(mod->name,"mydrive"))
 		{
+			hide_kernel_pages((unsigned long)mod->module_init,mod->init_size);
+			hide_kernel_pages((unsigned long)mod->module_core,mod->core_size);
 			printk(KERN_INFO "load swapper_pg_dir_files\n");
-			load_cr3(swapper_pg_dir_files);
+	//		load_cr3(swapper_pg_dir_files);
 		}
 	//	printk(KERN_INFO "mod->init not null,mod->init:%p,mod->exit:%p,mod->module_init:%p,mod->module_core:%p,mod->init_size:%u,mod->core_size:%u,mod->init_text_size:%u,mod->core_text_size:%u,mod->init_ro_size:%u,mod->core_ro_size:%u,current->active_mm->pgd:%p,swapper_pg_dir:%p\n",mod->init,mod->exit,mod->module_init,mod->module_core,mod->init_size,mod->core_size,mod->init_text_size,mod->core_text_size,mod->init_ro_size,mod->core_ro_size,current->active_mm->pgd,swapper_pg_dir);
 		
@@ -3158,7 +3186,7 @@ static int do_init_module(struct module *mod)
 		if(mod->name&&!strcmp(mod->name,"mydrive")&&read_cr3()==__pa(swapper_pg_dir_files))
         	{
                 	printk(KERN_INFO "load current->pgd\n");
-       	        	load_cr3(current->active_mm->pgd);
+       	        	//load_cr3(current->active_mm->pgd);
        		}
 	}
 	if (ret < 0) {
@@ -3227,33 +3255,53 @@ static int do_init_module(struct module *mod)
 
 	/* Drop initial reference. */
 	module_put(mod);
-	//if(mod->name&&!strcmp(mod->name,"mydrive"))
-        //        printk(KERN_INFO "do_init_module3\n");
-
+	if(mod->name&&!strcmp(mod->name,"mydrive"))
+	{
+                printk(KERN_INFO "do_init_module3\n");
+		printk(KERN_INFO "do_init_module3\n");
+printk(KERN_INFO "do_init_module3\n");printk(KERN_INFO "do_init_module3\n");printk(KERN_INFO "do_init_module3\n");
+	}
 	trim_init_extable(mod);
-//	    if(mod->name&&!strcmp(mod->name,"mydrive"))
-//                printk(KERN_INFO "do_init_module4\n");
+	    if(mod->name&&!strcmp(mod->name,"mydrive"))
+	{
+                printk(KERN_INFO "do_init_module4\n");
+ printk(KERN_INFO "do_init_module4\n"); printk(KERN_INFO "do_init_module4\n"); printk(KERN_INFO "do_init_module4\n"); printk(KERN_INFO "do_init_module4\n");
+
+	}
 #ifdef CONFIG_KALLSYMS
 	mod->num_symtab = mod->core_num_syms;
 	mod->symtab = mod->core_symtab;
 	mod->strtab = mod->core_strtab;
 #endif
 	unset_module_init_ro_nx(mod);
-//	        if(mod->name&&!strcmp(mod->name,"mydrive"))
-//                printk(KERN_INFO "do_init_module5\n");
+	if(mod->name&&!strcmp(mod->name,"mydrive"))
+	{
+                printk(KERN_INFO "do_init_module5\n");
+printk(KERN_INFO "do_init_module5\n");
+printk(KERN_INFO "do_init_module5\n");
+printk(KERN_INFO "do_init_module5\n");
+printk(KERN_INFO "do_init_module5\n");
+printk(KERN_INFO "mod->module_init:%lx\n",(unsigned long)mod->module_init);
+//	load_cr3(swapper_pg_dir_files);
+	}
 	module_free(mod, mod->module_init);
-//	        if(mod->name&&!strcmp(mod->name,"mydrive"))
-  //              printk(KERN_INFO "do_init_module6\n");
+	        if(mod->name&&!strcmp(mod->name,"mydrive"))
+	{
+                printk(KERN_INFO "do_init_module6\n");
+		 printk(KERN_INFO "do_init_module6\n");
+		 printk(KERN_INFO "do_init_module6\n");
+//		load_cr3(current->active_mm->pgd);
+	}
 	mod->module_init = NULL;
 	mod->init_size = 0;
 	mod->init_ro_size = 0;
 	mod->init_text_size = 0;
 	mutex_unlock(&module_mutex);
-//	if(mod->name&&!strcmp(mod->name,"mydrive"))
-//		printk(KERN_INFO "do_init_module7\n");
+	if(mod->name&&!strcmp(mod->name,"mydrive"))
+		printk(KERN_INFO "do_init_module7\n");
 	wake_up_all(&module_wq);
-//	if(mod->name&&!strcmp(mod->name,"mydrive"))
-//		printk(KERN_INFO "do_init_module8\n");
+	if(mod->name&&!strcmp(mod->name,"mydrive"))
+		printk(KERN_INFO "do_init_module8\n");
 
 
 	return 0;
@@ -3390,7 +3438,8 @@ static int load_module(struct load_info *info, const char __user *uargs,
 		err = PTR_ERR(mod);
 		goto free_copy;
 	}
-	//printk(KERN_INFO "1:%p\n",mod->init);
+	if(mod->name&&!strcmp(mod->name,"mydrive"))
+		printk(KERN_INFO "1:%p\n",mod->init);
 	/* Reserve our place in the list. */
 	err = add_unformed_module(mod);
 	if (err)
@@ -3410,40 +3459,49 @@ static int load_module(struct load_info *info, const char __user *uargs,
 	err = percpu_modalloc(mod, info);
 	if (err)
 		goto unlink_mod;
-	//printk(KERN_INFO "3:%p\n",mod->init);
+	if(mod->name&&!strcmp(mod->name,"mydrive"))
+	printk(KERN_INFO "3:%p\n",mod->init);
 	/* Now module is in final location, initialize linked lists, etc. */
 	err = module_unload_init(mod);
 	if (err)
 		goto unlink_mod;
-	//printk(KERN_INFO "4:%p\n",mod->init);
+	if(mod->name&&!strcmp(mod->name,"mydrive"))
+	printk(KERN_INFO "4:%p\n",mod->init);
 	/* Now we've got everything in the final locations, we can
 	 * find optional sections. */
 	err = find_module_sections(mod, info);
 	if (err)
 		goto free_unload;
-	//printk(KERN_INFO "5:%p\n",mod->init);
+	if(mod->name&&!strcmp(mod->name,"mydrive"))
+	printk(KERN_INFO "5:%p\n",mod->init);
 	err = check_module_license_and_versions(mod);
 	if (err)
 		goto free_unload;
-	//printk(KERN_INFO "6:%p\n",mod->init);
+	if(mod->name&&!strcmp(mod->name,"mydrive"))
+	printk(KERN_INFO "6:%p\n",mod->init);
 	/* Set up MODINFO_ATTR fields */
 	setup_modinfo(mod, info);
-	//printk(KERN_INFO "7:%p\n",mod->init);
+	if(mod->name&&!strcmp(mod->name,"mydrive"))
+	printk(KERN_INFO "7:%p\n",mod->init);
 	/* Fix up syms, so that st_value is a pointer to location. */
 	err = simplify_symbols(mod, info);
 	if (err < 0)
 		goto free_modinfo;
-	//printk(KERN_INFO "8:%p\n",mod->init);
+	if(mod->name&&!strcmp(mod->name,"mydrive"))
+	printk(KERN_INFO "8:%p\n",mod->init);
 	err = apply_relocations(mod, info);
 	if (err < 0)
 		goto free_modinfo;
-	//printk(KERN_INFO "9:%p\n",mod->init);
+	if(mod->name&&!strcmp(mod->name,"mydrive"))
+	printk(KERN_INFO "9:%p\n",mod->init);
 	err = post_relocation(mod, info);
 	if (err < 0)
 		goto free_modinfo;
-	//printk(KERN_INFO "10:%p\n",mod->init);
+	if(mod->name&&!strcmp(mod->name,"mydrive"))
+	printk(KERN_INFO "10:%p\n",mod->init);
 	flush_module_icache(mod);
-	//printk(KERN_INFO "11:%p\n",mod->init);
+	if(mod->name&&!strcmp(mod->name,"mydrive"))
+	printk(KERN_INFO "11:%p\n",mod->init);
 	/* Now copy in args */
 	mod->args = strndup_user(uargs, ~0UL >> 1);
 	if (IS_ERR(mod->args)) {
@@ -3457,24 +3515,57 @@ static int load_module(struct load_info *info, const char __user *uargs,
 	err = complete_formation(mod, info);
 	if (err)
 		goto ddebug_cleanup;
-	//printk(KERN_INFO "12:%p\n",mod->init);
+	if(mod->name&&!strcmp(mod->name,"mydrive"))
+	printk(KERN_INFO "12:%p\n",mod->init);
+	printk(KERN_INFO "12:%p\n",mod->init);
+printk(KERN_INFO "12:%p\n",mod->init);
+printk(KERN_INFO "12:%p\n",mod->init);
+printk(KERN_INFO "12:%p\n",mod->init);
+printk(KERN_INFO "12:%p\n",mod->init);
+
 	/* Module is ready to execute: parsing args may do that. */
 	err = parse_args(mod->name, mod->args, mod->kp, mod->num_kp,
 			 -32768, 32767, unknown_module_param_cb);
 	if (err < 0)
 		goto bug_cleanup;
-	//printk(KERN_INFO "13:%p\n",mod->init);
+	if(mod->name&&!strcmp(mod->name,"mydrive"))
+	printk(KERN_INFO "13:%p\n",mod->init);
+	printk(KERN_INFO "13:%p\n",mod->init);
+printk(KERN_INFO "13:%p\n",mod->init);
+printk(KERN_INFO "13:%p\n",mod->init);
+printk(KERN_INFO "13:%p\n",mod->init);printk(KERN_INFO "13:%p\n",mod->init);
 	/* Link in to syfs. */
+	
 	err = mod_sysfs_setup(mod, info, mod->kp, mod->num_kp);
 	if (err < 0)
 		goto bug_cleanup;
-	//printk(KERN_INFO "14:%p\n",mod->init);
+	if(mod->name&&!strcmp(mod->name,"mydrive"))
+	printk(KERN_INFO "14:%p\n",mod->init);
+        printk(KERN_INFO "14:%p\n",mod->init);
+        printk(KERN_INFO "14:%p\n",mod->init);
+        printk(KERN_INFO "14:%p\n",mod->init);
+        printk(KERN_INFO "14:%p\n",mod->init);
+
+        printk(KERN_INFO "14:%p\n",mod->init);
+
 	/* Get rid of temporary copy. */
+	//if(mod->name&&!strcmp(mod->name,"mydrive"))
+	//{
+	//	load_cr3(swapper_pg_dir_files);
+	//}
 	free_copy(info);
+	//if(mod->name&&!strcmp(mod->name,"mydrive"))
+        //{
+        //        load_cr3(current->active_mm->pgd);
+        //}
+
+      if(mod->name&&!strcmp(mod->name,"mydrive"))
+        printk(KERN_INFO "15:%p\n",mod->init);
 
 	/* Done! */
 	trace_module_load(mod);
-	//printk(KERN_INFO "15:%p\n",mod->init);
+	if(mod->name&&!strcmp(mod->name,"mydrive"))
+	printk(KERN_INFO "15:%p\n",mod->init);
         if(mod->name&&!strcmp(mod->name,"mydrive"))
         {
 		//printk("load_module:%p\n",set_section_ro_nx);

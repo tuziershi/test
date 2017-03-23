@@ -1082,9 +1082,9 @@ __do_page_fault(struct pt_regs *regs, unsigned long error_code)
 			pte=lookup_address(address,&level);
 			if(!pte||!(pte_val(*pte)&_PAGE_PRESENT))
 			{	
-				set_pte(pte,__pte(pte_val(*pte)|_PAGE_PRESENT));
-				//load_cr3(swapper_pg_dir_files);
-				//__flush_tlb_one(address);
+				//set_pte(pte,__pte(pte_val(*pte)|_PAGE_PRESENT));
+				load_cr3(swapper_pg_dir_files);
+				__flush_tlb_one(address);
 				//flush_tlb_all();
 			        printk(KERN_INFO "lookup_address\n");
 				return;

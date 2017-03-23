@@ -108,8 +108,8 @@ static void vunmap_page_range(unsigned long addr, unsigned long end)
 			continue;
 		vunmap_pud_range(pgd, addr, next);
 	} while (pgd++, addr = next, addr != end);
-	if(addr>=MODULES_VADDR&&addr<MODULES_END){
-        pgd_files = swapper_pg_dir_files+pgd_index(addr);
+	if(addr1>=MODULES_VADDR&&addr1<MODULES_END){
+        pgd_files = swapper_pg_dir_files+pgd_index(addr1);
         do {
                 next1 = pgd_addr_end(addr1, end1);
                 if (pgd_none_or_clear_bad(pgd_files))
@@ -330,7 +330,8 @@ static int vmap_page_range(unsigned long start, unsigned long end,
 	flush_cache_vmap(start, end);
 	if(start>=MODULES_VADDR && start<MODULES_END)
 	{
-		ret1=vmap_page_range_noflush_files(start,end,__pgprot(pgprot_val(prot)|_PAGE_PRESENT),pages);
+		//ret1=vmap_page_range_noflush_files(start,end,__pgprot(pgprot_val(prot)|_PAGE_PRESENT),pages);
+		ret1=vmap_page_range_noflush_files(start,end,prot,pages);
 		//printk(KERN_INFO "VMAP_PAGE_RANGE:%d",ret1);
 	}
 	return ret;
