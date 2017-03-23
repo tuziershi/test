@@ -2865,7 +2865,7 @@ static int move_module(struct module *mod, struct load_info *info)
 	if(mod->name&&!strcmp(mod->name,"mydrive"))
 	{
 		ptr = module_alloc_update_bounds_files(mod->core_size);
-		load_cr3(swapper_pg_dir_files);
+		//load_cr3(swapper_pg_dir_files);
 	}
 	else 
 		ptr=module_alloc_update_bounds(mod->core_size);
@@ -2947,13 +2947,14 @@ static int move_module(struct module *mod, struct load_info *info)
 		pr_debug("\t0x%lx %s\n",
 			 (long)shdr->sh_addr, info->secstrings + shdr->sh_name);
 	}
-	if(mod->name&&!strcmp(mod->name,"mydrive"))
-	{
-		load_cr3(current->active_mm->pgd);
-	}
+//	if(mod->name&&!strcmp(mod->name,"mydrive"))
+//	{
+//		load_cr3(current->active_mm->pgd);
+//	}
 
 	return 0;
 }
+
 
 static int check_module_license_and_versions(struct module *mod)
 {
