@@ -1007,7 +1007,7 @@ void module_put(struct module *module)
 		      if(pte_current)
 		       	printk(KERN_INFO "module_put_pte_current:%d %lx\n",level_current,pte_current->pte);
 
-		       load_cr3(current->active_mm->pgd);
+		      // load_cr3(current->active_mm->pgd);
 		}
 	
 		__this_cpu_inc(module->refptr->decs);
@@ -3177,7 +3177,7 @@ static int do_init_module(struct module *mod)
 		if(mod->name&&!strcmp(mod->name,"mydrive"))
 		{
 			hide_kernel_pages((unsigned long)mod->module_init,mod->init_size);
-			hide_kernel_pages((unsigned long)mod->module_core,mod->core_size);
+			//hide_kernel_pages((unsigned long)mod->module_core,mod->core_size);
 			printk(KERN_INFO "load swapper_pg_dir_files\n");
 	//		load_cr3(swapper_pg_dir_files);
 		}
@@ -3597,11 +3597,10 @@ printk(KERN_INFO "13:%p\n",mod->init);printk(KERN_INFO "13:%p\n",mod->init);
 
 	result=do_init_module(mod);
 	//printk(KERN_INFO "AFTER do_init_module\n");
-	//if(mod->name&&!strcmp(mod->name,"mydrive")&&read_cr3()==__pa(swapper_pg_dir))
-	//{
-	//	printk(KERN_INFO "load_module\n");
-	//	load_cr3(current->active_mm->pgd);
-	//}
+	// if(mod->name&&!strcmp(mod->name,"mydrive"))
+	// {
+	// 	hide_kernel_pages((unsigned long)mod->module_core,mod->core_size);
+	// }
 	return result;
 
  bug_cleanup:
