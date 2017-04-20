@@ -245,9 +245,11 @@ struct kmem_cache {
 #ifndef CONFIG_SLOB
 extern struct kmem_cache *kmalloc_caches[KMALLOC_SHIFT_HIGH + 1];
 extern struct kmem_cache *kmalloc_caches_files[KMALLOC_SHIFT_HIGH + 1];
+extern struct kmem_cache *kmalloc_caches_kernel[KMALLOC_SHIFT_HIGH + 1];
 #ifdef CONFIG_ZONE_DMA
 extern struct kmem_cache *kmalloc_dma_caches[KMALLOC_SHIFT_HIGH + 1];
 extern struct kmem_cache *kmalloc_dma_caches_files[KMALLOC_SHIFT_HIGH + 1];
+extern struct kmem_cache *kmalloc_dma_caches_kernel[KMALLOC_SHIFT_HIGH + 1];
 #endif
 
 /*
@@ -519,11 +521,16 @@ static __always_inline void *kmalloc(size_t size, gfp_t flags)
 
 			if (!index)
 				return ZERO_SIZE_PTR;
-			if(flags&__GFP_COME_FROM_FILESYSTEM)
+			if(flags&__GFP_COME_FROM_MODULE)
 			{
 			    //printk(KERN_INFO "come from include/linux/slab.h:kmalloc\n");
 			    return kmem_cache_alloc_trace(kmalloc_caches_files[index],
 					flags, size);
+			}
+			else if(flags&__GFP_COME_FROM_KERNEL)
+			{
+				  return kmem_cache_alloc_trace(kmalloc_caches_kernel[index],
+                                        flags, size);
 			}
 			else
 			    return kmem_cache_alloc_trace(kmalloc_caches[index],
@@ -531,11 +538,17 @@ static __always_inline void *kmalloc(size_t size, gfp_t flags)
 		}
 #endif
 	}
-	if(flags&__GFP_COME_FROM_FILESYSTEM)
+	if(flags&__GFP_COME_FROM_MODULE)
 	{
 		//printk(KERN_INFO "come from include/linux/slab.h    :kmalloc\n");
 		return __kmalloc(size, flags);
 	}
+	else if(flags&__GFP_COME_FROM_KERNEL)
+        {
+                //printk(KERN_INFO "come from include/linux/slab.h    :kmalloc\n");
+                return __kmalloc(size, flags);
+        }
+
 	else
 	{
  		return __kmalloc(size, flags);	
@@ -571,9 +584,12 @@ static __always_inline void *kmalloc_node(size_t size, gfp_t flags, int node)
 
 		if (!i)
 			return ZERO_SIZE_PTR;
-		if(flags & __GFP_COME_FROM_FILESYSTEM)
+		if(flags & __GFP_COME_FROM_MODULE)
 			return kmem_cache_alloc_node_trace(kmalloc_caches_files[i],
 							flags, node, size);
+		else if(flags & __GFP_COME_FROM_KERNEL)
+                        return kmem_cache_alloc_node_trace(kmalloc_caches_kernel[i],
+                                                        flags, node, size);
 		else
 			return kmem_cache_alloc_node_trace(kmalloc_caches[i],
 							flags, node, size);

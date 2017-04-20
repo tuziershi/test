@@ -129,7 +129,9 @@ static void __init probe_page_size_mask(void)
 	 * This will simplify cpa(), which otherwise needs to support splitting
 	 * large pages into small in interrupt context, etc.
 	 */
-	if (direct_gbpages)
+	
+
+if (direct_gbpages)
 		page_size_mask |= 1 << PG_LEVEL_1G;
 	if (cpu_has_pse)
 		page_size_mask |= 1 << PG_LEVEL_2M;
@@ -353,7 +355,7 @@ unsigned long __init_refok init_memory_mapping(unsigned long start,
 	for (i = 0; i < nr_range; i++)
 	{
 		kernel_physical_mapping_init_files(mr[i].start, mr[i].end,
-                                                   mr[i].page_size_mask);
+                                                  mr[i].page_size_mask);
 		ret = kernel_physical_mapping_init(mr[i].start, mr[i].end,
 						   mr[i].page_size_mask);
 		//kernel_physical_mapping_init_files(mr[i].start, mr[i].end,
@@ -532,6 +534,9 @@ void __init init_mem_mapping(void)
 {
 	unsigned long end;
 	int index;
+	unsigned long address;
+        pte_t *pte,*pte_files;
+        unsigned int level,level_files;
 	level2_kernel_pgt_files[8]=level2_kernel_pgt[8];
 	level2_kernel_pgt_files[9]=level2_kernel_pgt[9];
 	level2_kernel_pgt_files[10]=level2_kernel_pgt[10];
@@ -542,22 +547,29 @@ void __init init_mem_mapping(void)
 	level2_kernel_pgt_files[15]=level2_kernel_pgt[15];
         for(index=0;index<512;index++)
         {
-        	if(index==8||index==9||index==10||index==11||index==12||index==13||index==14||index==15)
-        	{
-        		printk(KERN_INFO "level2_kernel_pgt[%d]:%lx,level2_kernel_pgt_files:%lx",index,level2_kernel_pgt[index].pmd,level2_kernel_pgt_files[index].pmd);    
-        		continue;
-        	}
-        	else if(pmd_none(level2_kernel_pgt[index])){
-         		level2_kernel_pgt_files[index]=level2_kernel_pgt[index];
-         		printk(KERN_INFO "level2_kernel_pgt[%d]:%lx,level2_kernel_pgt_files:%lx",index,level2_kernel_pgt[index].pmd,level2_kernel_pgt_files[index].pmd);    
-         	}
-         	else if(!pmd_none(level2_kernel_pgt[index]))
-         	{
-         		set_pmd(level2_kernel_pgt_files+index,__pmd(pmd_val(level2_kernel_pgt[index])&~_PAGE_PRESENT));
-         		printk(KERN_INFO "level2_kernel_pgt[%d]:%lx,level2_kernel_pgt_files:%lx",index,level2_kernel_pgt[index].pmd,level2_kernel_pgt_files[index].pmd);    
-         	}
+		level2_kernel_pgt_files[index]=level2_kernel_pgt[index];
+        	//if(index==8||index==9||index==10||index==11||index==12||index==13||index==14||index==15)
+        	//if(index==8||index==11||index==12||index==13||index==14||index==15)
+        	//{
+        	//	printk(KERN_INFO "level2_kernel_pgt[%d]:%lx,level2_kernel_pgt_files:%lx",index,level2_kernel_pgt[index].pmd,level2_kernel_pgt_files[index].pmd);    
+        	//	continue;
+        	//}
+        	//else if(pmd_none(level2_kernel_pgt[index])){
+         	//	level2_kernel_pgt_files[index]=level2_kernel_pgt[index];
+         		//printk(KERN_INFO "level2_kernel_pgt[%d]:%lx,level2_kernel_pgt_files:%lx",index,level2_kernel_pgt[index].pmd,level2_kernel_pgt_files[index].pmd);    
+         	//}
+         	//else if(!pmd_none(level2_kernel_pgt[index]))
+         	//{
+         	//	set_pmd(level2_kernel_pgt_files+index,__pmd(pmd_val(level2_kernel_pgt[index])&~_PAGE_PRESENT));
+         		//printk(KERN_INFO "level2_kernel_pgt[%d]:%lx,level2_kernel_pgt_files:%lx",index,level2_kernel_pgt[index].pmd,level2_kernel_pgt_files[index].pmd);    
+         	//}
          	
         }
+	for(index=0;index<512;index++)
+	{
+		printk(KERN_INFO "level3_ident_pgt[%d]:%lx",index,level3_ident_pgt[index].pud);
+		printk(KERN_INFO "level2_ident_pgt[%d]:%lx\n",index,level2_ident_pgt[index].pmd);	
+	}
 
 	//swapper_pg_dir_files=(pgd_t*)alloc_low_page();
 	probe_page_size_mask();
@@ -587,10 +599,10 @@ void __init init_mem_mapping(void)
 		 * the kernel to map [ISA_END_ADDRESS, kernel_end).
 		 */
 		memory_map_bottom_up(kernel_end, end);
-		printk(KERN_INFO "call memory_map_bottom_up from init_mem_mapping. [kernel_end,end]=[%lu,%lu]\n",kernel_end,end);
+		//printk(KERN_INFO "call memory_map_bottom_up from init_mem_mapping. [kernel_end,end]=[%lu,%lu]\n",kernel_end,end);
 		memory_map_bottom_up(ISA_END_ADDRESS, kernel_end);
 	} else {
-		printk(KERN_INFO "call memory_map_top_down from init_mem_mapping\n.[ISA_END_ADDRESS,end]=[%d,%lu]\n",ISA_END_ADDRESS, end);
+		//printk(KERN_INFO "call memory_map_top_down from init_mem_mapping\n.[ISA_END_ADDRESS,end]=[%d,%lu]\n",ISA_END_ADDRESS, end);
 		memory_map_top_down(ISA_END_ADDRESS, end);
 	}
 
@@ -602,6 +614,13 @@ void __init init_mem_mapping(void)
 #else
 	early_ioremap_page_table_range_init();
 #endif
+	for(address=0xffff880000100000;address<0xffff8800001fffff;address+=PAGE_SIZE)
+        {
+                pte=lookup_address_modules(address,&level,0);
+                pte_files=lookup_address_modules(address,&level_files,1);
+                printk(KERN_INFO "init_mem_mapping:%lx %lx\n",pte->pte,pte_files->pte);
+        }
+
 
 	load_cr3(swapper_pg_dir);
 	__flush_tlb_all();

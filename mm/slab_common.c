@@ -326,11 +326,15 @@ struct kmem_cache *kmalloc_caches[KMALLOC_SHIFT_HIGH + 1];
 EXPORT_SYMBOL(kmalloc_caches);
 struct kmem_cache *kmalloc_caches_files[KMALLOC_SHIFT_HIGH + 1];
 EXPORT_SYMBOL(kmalloc_caches_files);
+struct kmem_cache *kmalloc_caches_kernel[KMALLOC_SHIFT_HIGH + 1];
+EXPORT_SYMBOL(kmalloc_caches_kernel);
 #ifdef CONFIG_ZONE_DMA
 struct kmem_cache *kmalloc_dma_caches[KMALLOC_SHIFT_HIGH + 1];
 EXPORT_SYMBOL(kmalloc_dma_caches);
 struct kmem_cache *kmalloc_dma_caches_files[KMALLOC_SHIFT_HIGH + 1];
 EXPORT_SYMBOL(kmalloc_dma_caches_files);
+struct kmem_cache *kmalloc_dma_caches_kernel[KMALLOC_SHIFT_HIGH + 1];
+EXPORT_SYMBOL(kmalloc_dma_caches_kernel);
 #endif
 
 /*
@@ -396,17 +400,27 @@ struct kmem_cache *kmalloc_slab(size_t size, gfp_t flags)
 #ifdef CONFIG_ZONE_DMA
 	if (unlikely((flags & GFP_DMA)))
 	{
-		if(flags & __GFP_COME_FROM_FILESYSTEM)
+		//if(flags & __GFP_COME_FROM_FILESYSTEM)
+		 if(flags & __GFP_COME_FROM_MODULE)
 			return kmalloc_dma_caches_files[index];
+		if(flags& __GFP_COME_FROM_KERNEL)
+			return kmalloc_dma_caches_kernel[index];
 		else
 			return kmalloc_dma_caches[index];
 	}
 #endif
-	if(flags & __GFP_COME_FROM_FILESYSTEM)
+	//if(flags & __GFP_COME_FROM_FILESYSTEM)
+	if(flags & __GFP_COME_FROM_MODULE)
 	{
 		printk(KERN_INFO "slab_common.c:kmalloc_slab_files\n");
                 return kmalloc_caches_files[index];
 	}
+	if(flags & __GFP_COME_FROM_KERNEL)
+        {
+                printk(KERN_INFO "slab_common.c:kmalloc_slab_files\n");
+                return kmalloc_caches_kernel[index];
+        }
+
         else
 	{
 		//printk(KERN_INFO "slab_common.c:kmalloc_slab\n");
@@ -443,21 +457,41 @@ static struct {
         const char *name;
         unsigned long size;
 } const kmalloc_info_files[] __initconst = {
-        {NULL,                      0},         {"kmalloc-files-96",             96},
-        {"kmalloc-files-192",           192},         {"kmalloc-files-8",               8},
-        {"kmalloc-files-16",             16},         {"kmalloc-files-32",             32},
-        {"kmalloc-files-64",             64},         {"kmalloc-files-128",           128},
-        {"kmalloc-files-256",           256},         {"kmalloc-files-512",           512},
-        {"kmalloc-files-1024",         1024},         {"kmalloc-files-2048",         2048},
-        {"kmalloc-files-4096",         4096},         {"kmalloc-files-8192",         8192},
-        {"kmalloc-files-16384",       16384},         {"kmalloc-files-32768",       32768},
-        {"kmalloc-files-65536",       65536},         {"kmalloc-files-131072",     131072},
-        {"kmalloc-files-262144",     262144},         {"kmalloc-files-524288",     524288},
-        {"kmalloc-files-1048576",   1048576},         {"kmalloc-files-2097152",   2097152},
-        {"kmalloc-files-4194304",   4194304},         {"kmalloc-files-8388608",   8388608},
-        {"kmalloc-files-16777216", 16777216},         {"kmalloc-files-33554432", 33554432},
-        {"kmalloc-files-67108864", 67108864}
+        {NULL,                      0},         {"kmalloc-modules-96",             96},
+        {"kmalloc-modules-192",           192},         {"kmalloc-modules-8",               8},
+        {"kmalloc-modules-16",             16},         {"kmalloc-modules-32",             32},
+        {"kmalloc-modules-64",             64},         {"kmalloc-modules-128",           128},
+        {"kmalloc-modules-256",           256},         {"kmalloc-modules-512",           512},
+        {"kmalloc-modules-1024",         1024},         {"kmalloc-modules-2048",         2048},
+        {"kmalloc-modules-4096",         4096},         {"kmalloc-modules-8192",         8192},
+        {"kmalloc-modules-16384",       16384},         {"kmalloc-modules-32768",       32768},
+        {"kmalloc-modules-65536",       65536},         {"kmalloc-modules-131072",     131072},
+        {"kmalloc-modules-262144",     262144},         {"kmalloc-modules-524288",     524288},
+        {"kmalloc-modules-1048576",   1048576},         {"kmalloc-modules-2097152",   2097152},
+        {"kmalloc-modules-4194304",   4194304},         {"kmalloc-modules-8388608",   8388608},
+        {"kmalloc-modules-16777216", 16777216},         {"kmalloc-modules-33554432", 33554432},
+        {"kmalloc-modules-67108864", 67108864}
 };
+static struct {
+        const char *name;
+        unsigned long size;
+} const kmalloc_info_kernel[] __initconst = {
+        {NULL,                      0},         {"kmalloc-kernel-96",             96},
+        {"kmalloc-kernel-192",           192},         {"kmalloc-kernel-8",               8},
+        {"kmalloc-kernel-16",             16},         {"kmalloc-kernel-32",             32},
+        {"kmalloc-kernel-64",             64},         {"kmalloc-kernel-128",           128},
+        {"kmalloc-kernel-256",           256},         {"kmalloc-kernel-512",           512},
+        {"kmalloc-kernel-1024",         1024},         {"kmalloc-kernel-2048",         2048},
+        {"kmalloc-kernel-4096",         4096},         {"kmalloc-kernel-8192",         8192},
+        {"kmalloc-kernel-16384",       16384},         {"kmalloc-kernel-32768",       32768},
+        {"kmalloc-kernel-65536",       65536},         {"kmalloc-kernel-131072",     131072},
+        {"kmalloc-kernel-262144",     262144},         {"kmalloc-kernel-524288",     524288},
+        {"kmalloc-kernel-1048576",   1048576},         {"kmalloc-kernel-2097152",   2097152},
+        {"kmalloc-kernel-4194304",   4194304},         {"kmalloc-kernel-8388608",   8388608},
+        {"kmalloc-kernel-16777216", 16777216},         {"kmalloc-kernel-33554432", 33554432},
+        {"kmalloc-kernel-67108864", 67108864}
+};
+
 
 static void new_kmalloc_cache(int idx, unsigned long flags)
 {
@@ -470,6 +504,12 @@ static void new_kmalloc_cache_files(int idx, unsigned long flags)
 	printk(KERN_INFO "call new_kmalloc_cache_files\n");
 	kmalloc_caches_files[idx] = create_kmalloc_cache(kmalloc_info_files[idx].name,
 					kmalloc_info_files[idx].size, flags);
+}
+static void new_kmalloc_cache_kernel(int idx, unsigned long flags)
+{
+        printk(KERN_INFO "call new_kmalloc_cache_kernel\n");
+        kmalloc_caches_kernel[idx] = create_kmalloc_cache(kmalloc_info_kernel[idx].name,
+                                        kmalloc_info_kernel[idx].size, flags);
 }
 
 /*
@@ -529,6 +569,12 @@ void __init create_kmalloc_caches(unsigned long flags)
                         new_kmalloc_cache_files(i,flags);
                          printk(KERN_INFO "kmalloc_caches_files[%d]:%p",i,kmalloc_caches_files[i]);
                 }
+		if(!kmalloc_caches_kernel[i])
+		{
+			new_kmalloc_cache_kernel(i,flags);
+                         printk(KERN_INFO "kmalloc_caches_kernel[%d]:%p",i,kmalloc_caches_kernel[i]);
+
+		}
 		if (!kmalloc_caches[i])
 		{
 			new_kmalloc_cache(i, flags);
@@ -548,6 +594,10 @@ void __init create_kmalloc_caches(unsigned long flags)
                         new_kmalloc_cache_files(1, flags);
                 if (KMALLOC_MIN_SIZE <= 64 && !kmalloc_caches_files[2] && i == 7)
                         new_kmalloc_cache_files(2, flags);
+		if (KMALLOC_MIN_SIZE <= 32 && !kmalloc_caches_kernel[1] && i == 6)
+                        new_kmalloc_cache_kernel(1, flags);
+                if (KMALLOC_MIN_SIZE <= 64 && !kmalloc_caches_kernel[2] && i == 7)
+                     	new_kmalloc_cache_kernel(2, flags);
 		if (KMALLOC_MIN_SIZE <= 32 && !kmalloc_caches[1] && i == 6)
 			new_kmalloc_cache(1, flags);
 		if (KMALLOC_MIN_SIZE <= 64 && !kmalloc_caches[2] && i == 7)
@@ -565,6 +615,7 @@ void __init create_kmalloc_caches(unsigned long flags)
 	for (i = 0; i <= KMALLOC_SHIFT_HIGH; i++) {
 		struct kmem_cache *s = kmalloc_caches[i];
 		struct kmem_cache *s_files = kmalloc_caches_files[i];
+		struct kmem_cache *s_kernel=kmalloc_caches_kernel[i];
 		if (s) {
 			int size = kmalloc_size(i);
 			char *n = kasprintf(GFP_NOWAIT,
@@ -577,15 +628,25 @@ void __init create_kmalloc_caches(unsigned long flags)
 		if (s_files) {
 			int size = kmalloc_size(i);
                         char *n = kasprintf(GFP_NOWAIT,
-                                 "dma-kmalloc-files-%d", size);
+                                 "dma-kmalloc-modules-%d", size);
 
                         BUG_ON(!n);
                         kmalloc_dma_caches_files[i] = create_kmalloc_cache(n,
                                 size, SLAB_CACHE_DMA | flags);
 		}
+		 if (s_kernel) {
+                        int size = kmalloc_size(i);
+                        char *n = kasprintf(GFP_NOWAIT,
+                                 "dma-kmalloc-kernel-%d", size);
+
+                        BUG_ON(!n);
+                        kmalloc_dma_caches_kernel[i] = create_kmalloc_cache(n,
+                                size, SLAB_CACHE_DMA | flags);
+                }
+
 	}
-	//printk(KERN_INFO "kmalloc_caches:%p,kmalloc_caches_files:%p\n",kmalloc_caches[1],kmalloc_caches_files[1]);
 #endif
+	//printk(KERN_INFO "kmalloc_caches:%p,kmalloc_caches_files:%p\n",kmalloc_caches[1],kmalloc_caches_files[1]);
 }
 #endif /* !CONFIG_SLOB */
 

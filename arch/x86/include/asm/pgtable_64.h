@@ -30,6 +30,7 @@ extern pgd_t init_level4_pgt_files[];
 
 #define swapper_pg_dir init_level4_pgt
 #define swapper_pg_dir_files init_level4_pgt_files
+#define swapper_pg_modules_dir swapper_pg_dir_files
 extern void paging_init(void);
 //extern void copy_page_tables(void);
 #define pte_ERROR(e)					\

@@ -474,7 +474,35 @@ static void set_kernel_pages(struct page *p,unsigned int n)
                 __flush_tlb_one(address);
         }
 }
+
 static void set_files_pages(struct page *p,unsigned int n)
+{
+        unsigned int i;
+        for(i=0;i<n;i++)
+        {    
+                unsigned long address;
+                //pte_t *pte;
+                pte_t *pte_files;
+                //unsigned int level;
+                unsigned int level_files;
+                address=(unsigned long)page_address(&p[i]);
+                //pte=lookup_address(address,&level);
+                pte_files=lookup_address_files(address,&level_files,1);
+                //BUG_ON(!pte);
+                //BUG_ON(level!=PG_LEVEL_4K);
+                BUG_ON(!pte_files);
+                BUG_ON(level_files!=PG_LEVEL_4K);
+                //set_pte(pte,__pte(pte_val(*pte)|_PAGE_PRESENT));
+	//	if(pte_files&&level_files==PG_LEVEL_4K)
+                set_pte(pte_files,__pte(pte_val(*pte_files)|_PAGE_PRESENT));
+                //set_pte(pte,__pte(pte_val(*pte)&~_PAGE_RW));  
+                //set_pte(pte_files,__pte(pte_val(*pte_files)|_PAGE_RW));
+                __flush_tlb_one(address);
+        }
+}
+
+
+static void hide_files_pages(struct page *p,unsigned int n)
 {
         unsigned int i;
         for(i=0;i<n;i++)
@@ -492,7 +520,7 @@ static void set_files_pages(struct page *p,unsigned int n)
                 BUG_ON(!pte_files);
                 BUG_ON(level_files!=PG_LEVEL_4K);
                 //set_pte(pte,__pte(pte_val(*pte)|_PAGE_PRESENT));
-                set_pte(pte_files,__pte(pte_val(*pte_files)|_PAGE_PRESENT));
+                set_pte(pte_files,__pte(pte_val(*pte_files)&~_PAGE_PRESENT));
                 //set_pte(pte,__pte(pte_val(*pte)&~_PAGE_RW));  
                 //set_pte(pte_files,__pte(pte_val(*pte_files)|_PAGE_RW));
                 __flush_tlb_one(address);
@@ -2829,15 +2857,15 @@ out:
 	    if(gfp_mask & GFP_REQUEST_SOURCE_MASK)
 	    {
 		set_globally_invisible(page,1<<compound_order(page));    //设置全部内核态页表不可见；
-		if(gfp_mask & __GFP_COME_FROM_FILESYSTEM)
+		if(gfp_mask & __GFP_COME_FROM_MODULE)
 		{
-			printk(KERN_INFO "come from __alloc_pages_nodemask,__GFP_COME_FROM_FILESYSTEM\n");   
-			//hide_files_pages(page,1<<compound_order(page));
+			printk(KERN_INFO "come from __alloc_pages_nodemask,__GFP_COME_FROM_SOURCE1\n");   
+			//set_kernel_pages(page,1<<compound_order(page));
 			set_files_pages(page,1<<compound_order(page));
 		}
 		if(gfp_mask & __GFP_COME_FROM_KERNEL)
 		{
-			printk(KERN_INFO "come from __alloc_pages_nodemask:__GFP_COME_FROM_KERNEL\n");  
+			printk(KERN_INFO "come from __alloc_pages_nodemask:__GFP_COME_FROM_SOURCE2\n");  
 			//hide_kernel_pages(page,1<<compound_order(page));
 			set_kernel_pages(page,1<<compound_order(page));
 		}

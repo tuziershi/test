@@ -1505,10 +1505,10 @@ static struct page *new_slab(struct kmem_cache *s, gfp_t flags, int node)
 	//int size;
 
 	BUG_ON(flags & GFP_SLAB_BUG_MASK);
-	if(flags & GFP_REQUEST_SOURCE_MASK)
-	{
-		printk(KERN_INFO "come from new_slab1\n");
-	}
+	//if(flags & GFP_REQUEST_SOURCE_MASK)
+	//{
+	//	printk(KERN_INFO "come from new_slab1\n");
+	//}
 
 	page = allocate_slab(s,
 		flags & (GFP_RECLAIM_MASK | GFP_CONSTRAINT_MASK | GFP_REQUEST_SOURCE_MASK), node);
@@ -2323,16 +2323,12 @@ static inline void *new_slab_objects(struct kmem_cache *s, gfp_t flags,
 
 	if (freelist)
 		return freelist;
-	if(flags & GFP_REQUEST_SOURCE_MASK)
-        {
-                printk(KERN_INFO "come from new_slab_objects1\n");
-        }
+	//if(flags & GFP_REQUEST_SOURCE_MASK)
+        //{
+        //        printk(KERN_INFO "come from new_slab_objects1\n");
+        //}
 	page = new_slab(s, flags, node);
 	if (page) {
-		//if(flags&__GFP_COME_FROM_FILESYSTEM)
-		//{
-		//	printk(KERN_INFO "come from slub.c:new slab_objects,need to modify pte\n");
-		//}
 		c = __this_cpu_ptr(s->cpu_slab);
 		if (c->page)
 			flush_slab(s, c);
@@ -2349,8 +2345,6 @@ static inline void *new_slab_objects(struct kmem_cache *s, gfp_t flags,
 		*pc = c;
 	} else
 		freelist = NULL;
-	 if(flags&__GFP_COME_FROM_FILESYSTEM)
-                        printk(KERN_INFO "new_slab_objects2\n");
 	return freelist;
 }
 
@@ -2418,10 +2412,10 @@ static void *__slab_alloc(struct kmem_cache *s, gfp_t gfpflags, int node,
 	void *freelist;
 	struct page *page;
 	unsigned long flags;
-	if(gfpflags & GFP_REQUEST_SOURCE_MASK)
-        {
-                printk(KERN_INFO "come from __slab_alloc1\n");
-        }
+	//if(gfpflags & GFP_REQUEST_SOURCE_MASK)
+        //{
+        //        printk(KERN_INFO "come from __slab_alloc1\n");
+        //}
 	local_irq_save(flags);
 #ifdef CONFIG_PREEMPT
 	/*
@@ -2481,11 +2475,11 @@ load_freelist:
 	 * That page must be frozen for per cpu allocations to work.
 	 */
 	VM_BUG_ON(!c->page->frozen);
-	if(gfpflags&__GFP_COME_FROM_FILESYSTEM)
-                        printk(KERN_INFO "__slab_alloc2\n");
+	//if(gfpflags&__GFP_COME_FROM_MODULE)
+        //                printk(KERN_INFO "__slab_alloc2\n");
 	c->freelist = get_freepointer(s, freelist);
-	if(gfpflags&__GFP_COME_FROM_FILESYSTEM)
-                        printk(KERN_INFO "__slab_alloc3\n");
+	//if(gfpflags&__GFP_COME_FROM_MODULE)
+        //                printk(KERN_INFO "__slab_alloc3\n");
 	c->tid = next_tid(c->tid);
 	local_irq_restore(flags);
 
@@ -2500,10 +2494,10 @@ new_slab:
 		c->freelist = NULL;
 		goto redo;
 	}
-	if(gfpflags & GFP_REQUEST_SOURCE_MASK)
-        {
-                printk(KERN_INFO "come from __slab_alloc4\n");
-        }
+	//if(gfpflags & GFP_REQUEST_SOURCE_MASK)
+        //{
+        //        printk(KERN_INFO "come from __slab_alloc4\n");
+        //}
 	freelist = new_slab_objects(s, gfpflags, node, &c);
 
 	if (unlikely(!freelist)) {
@@ -2517,8 +2511,6 @@ new_slab:
 	page = c->page;
 	if (likely(!kmem_cache_debug(s) && pfmemalloc_match(page, gfpflags)))
 	{
-		if(gfpflags&__GFP_COME_FROM_FILESYSTEM)
-			printk(KERN_INFO "__slab_alloc1\n");
 		goto load_freelist;
 	}
 	/* Only entered in the debug case */
@@ -2552,10 +2544,10 @@ static __always_inline void *slab_alloc_node(struct kmem_cache *s,
 	unsigned long tid;
 	pte_t * pte;
         unsigned int level;
-	if(gfpflags & GFP_REQUEST_SOURCE_MASK)
-        {
-                printk(KERN_INFO "come from slab_alloc_node1\n");
-        }
+	//if(gfpflags & GFP_REQUEST_SOURCE_MASK)
+        //{
+        //	printk(KERN_INFO "come from slab_alloc_node1\n");
+        //}
 
 	if (slab_pre_alloc_hook(s, gfpflags))
 		return NULL;
@@ -2589,10 +2581,10 @@ redo:
 	page = c->page;
 	if (unlikely(!object || !node_match(page, node)))
 	{
-		if(gfpflags & GFP_REQUEST_SOURCE_MASK)
-	        {
-               		 printk(KERN_INFO "come from slab_alloc_node2\n");
-        	}
+		//if(gfpflags & GFP_REQUEST_SOURCE_MASK)
+	        //{
+               	//	 printk(KERN_INFO "come from slab_alloc_node2\n");
+        	//}
 		object = __slab_alloc(s, gfpflags, node, addr, c);
 		
 	}
@@ -2625,8 +2617,6 @@ redo:
 		prefetch_freepointer(s, next_object);
 		stat(s, ALLOC_FASTPATH);
 	}
-	if(gfpflags&__GFP_COME_FROM_FILESYSTEM)
-                        printk(KERN_INFO "slab_alloc_node\n");
 	if (unlikely(gfpflags & __GFP_ZERO) && object)
 	{
 		pte=lookup_address((unsigned long)object,&level);
@@ -2644,11 +2634,7 @@ redo:
 
 		//memset(object, 0, s->object_size);
 	}
-	if(gfpflags&__GFP_COME_FROM_FILESYSTEM)
-                        printk(KERN_INFO "slab_alloc_node\n");
-	slab_post_alloc_hook(s, gfpflags, object);
-	if(gfpflags&__GFP_COME_FROM_FILESYSTEM)
-                        printk(KERN_INFO "slab_alloc_node\n");
+	slab_post_alloc_hook(s,gfpflags,object);
 
 	return object;
 }
@@ -3503,7 +3489,7 @@ void *__kmalloc(size_t size, gfp_t flags)
 	ret = slab_alloc(s, flags, _RET_IP_);
 
 	trace_kmalloc(_RET_IP_, ret, size, s->size, flags);
-	if(flags&__GFP_COME_FROM_FILESYSTEM)
+	if(flags&__GFP_COME_FROM_MODULE)
                         printk(KERN_INFO "__kmalloc\n");
 	return ret;
 }
@@ -5348,8 +5334,10 @@ static char *create_unique_id(struct kmem_cache *s)
 		*p++ = 'F';
 	if (!(s->flags & SLAB_NOTRACK))
 		*p++ = 't';
-	if(!memcmp(s->name,"dma-kmalloc-files",17)||!memcmp(s->name,"kmalloc-files",13))
-		*p++ = 'f';
+	if(!memcmp(s->name,"dma-kmalloc-modules",17)||!memcmp(s->name,"kmalloc-modules",13))
+		*p++ = 'm';
+	if(!memcmp(s->name,"dma-kmalloc-kernel",17)||!memcmp(s->name,"kmalloc-kernel",13))
+                *p++ = 'k';
 	if (p != name + 1)
 		*p++ = '-';
 	p += sprintf(p, "%07d", s->size);

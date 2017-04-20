@@ -271,12 +271,31 @@ void __init reset_all_zones_managed_pages(void)
 unsigned long __init free_all_bootmem(void)
 {
 	unsigned long total_pages = 0;
+	unsigned long address;
+	pte_t* pte;
+	unsigned int level;
 	bootmem_data_t *bdata;
+	printk(KERN_INFO "free_all_bootmem\n");
+	  for(address=0xffff880000100000;address<=0xffff8800001fffff;address=address+0x1000)
+        {
+                pte=lookup_address(address,&level);
+                printk(KERN_INFO "mm_init1:address:%lx,pte:%lx,level:%d\n",address,pte->pte,level);
+        }
 
 	reset_all_zones_managed_pages();
+	                for(address=0xffff880000100000;address<=0xffff8800001fffff;address=address+0x1000)
+        {
+                pte=lookup_address(address,&level);
+                printk(KERN_INFO "mm_init2:address:%lx,pte:%lx,level:%d\n",address,pte->pte,level);
+        }
 
 	list_for_each_entry(bdata, &bdata_list, list)
 		total_pages += free_all_bootmem_core(bdata);
+	                for(address=0xffff880000100000;address<=0xffff8800001fffff;address=address+0x1000)
+        {
+                pte=lookup_address(address,&level);
+                printk(KERN_INFO "mm_init3:address:%lx,pte:%lx,level:%d\n",address,pte->pte,level);
+        }
 
 	totalram_pages += total_pages;
 

@@ -446,7 +446,6 @@ phys_pte_init(pte_t *pte_page, unsigned long addr, unsigned long end,
 		if (pte_val(*pte)) {
 			if (!after_bootmem)
 				pages++;
-			printk(KERN_INFO "phys_pte_init:address:%lx,pte:%lx\n",addr,pte->pte);
 			continue;
 		}
 
@@ -502,7 +501,7 @@ phys_pte_init_files(pte_t *pte_page, unsigned long addr, unsigned long end,
                                pte, addr, pfn_pte(addr >> PAGE_SHIFT, PAGE_KERNEL).pte);
                // pages++;
                 set_pte(pte, pfn_pte(addr >> PAGE_SHIFT, prot));
-		//set_pte(pte,__pte(pte_val(*pte)&~_PAGE_PRESENT));
+		set_pte(pte,__pte(pte_val(*pte)&~_PAGE_PRESENT));
                 //last_map_addr = (addr & PAGE_MASK) + PAGE_SIZE;
         }
 
@@ -1344,50 +1343,21 @@ static void __init register_page_bootmem_info(void)
 
 void __init mem_init(void)
 {
-//	unsigned long address;
-//	pte_t *pte;
-//	unsigned int level;
 	pci_iommu_alloc();
-	    //    for(address=0xffff880000100000;address<=0xffff8800001fffff;address=address+0x1000)
-  //    {
-   //             pte=lookup_address(address,&level);
-      //          printk(KERN_INFO "mm_init1:address:%lx,pte:%lx,level:%d\n",address,pte->pte,level);
-    //    }
 
 	/* clear_bss() already clear the empty_zero_page */
 
 	register_page_bootmem_info();
-//	        for(address=0xffff880000100000;address<=0xffff8800001fffff;address=address+0x1000)
-//        {
-//                pte=lookup_address(address,&level);
-//                printk(KERN_INFO "mm_init2:address:%lx,pte:%lx,level:%d\n",address,pte->pte,level);
-//        }
 
 	/* this will put all memory onto the freelists */
 	free_all_bootmem();
 	after_bootmem = 1;
-//	        for(address=0xffff880000100000;address<=0xffff8800001fffff;address=address+0x1000)
-//        {
-//                pte=lookup_address(address,&level);
-//                printk(KERN_INFO "mm_init3:address:%lx,pte:%lx,level:%d\n",address,pte->pte,level);
-//        }
 
 	/* Register memory areas for /proc/kcore */
 	kclist_add(&kcore_vsyscall, (void *)VSYSCALL_START,
 			 VSYSCALL_END - VSYSCALL_START, KCORE_OTHER);
-//	        for(address=0xffff880000100000;address<=0xffff8800001fffff;address=address+0x1000)
-//    {
-//                pte=lookup_address(address,&level);
-//                printk(KERN_INFO "mm_init4:address:%lx,pte:%lx,level:%d\n",address,pte->pte,level);
-//        }
 
 	mem_init_print_info(NULL);
-//	        for(address=0xffff880000100000;address<=0xffff8800001fffff;address=address+0x1000)
-//        {
-//                pte=lookup_address(address,&level);
-//                printk(KERN_INFO "mm_init5:address:%lx,pte:%lx,level:%d\n",address,pte->pte,level);
-//        }
-
 }
 
 #ifdef CONFIG_DEBUG_RODATA

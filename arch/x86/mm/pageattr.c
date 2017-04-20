@@ -110,6 +110,55 @@ static inline unsigned long highmap_end_pfn(void)
 # define debug_pagealloc 0
 #endif
 
+static void hide_files_pages(struct page *p,unsigned int n)
+{
+        unsigned int i;
+        for(i=0;i<n;i++)
+        {
+                unsigned long address;
+                //pte_t *pte;
+                pte_t *pte_files;
+                //unsigned int level;
+                unsigned int level_files;
+                address=(unsigned long)page_address(&p[i]);
+                //pte=lookup_address(address,&level);
+                pte_files=lookup_address_files(address,&level_files,1);
+                //BUG_ON(!pte);
+                //BUG_ON(level!=PG_LEVEL_4K);
+                BUG_ON(!pte_files);
+                BUG_ON(level_files!=PG_LEVEL_4K);
+                //set_pte(pte,__pte(pte_val(*pte)|_PAGE_PRESENT));
+                set_pte(pte_files,__pte(pte_val(*pte_files)&~(_PAGE_PRESENT|_PAGE_RW|_PAGE_GLOBAL)));
+                //set_pte(pte,__pte(pte_val(*pte)&~_PAGE_RW));  
+                //set_pte(pte_files,__pte(pte_val(*pte_files)|_PAGE_RW));
+                __flush_tlb_one(address);
+        }
+}
+static void set_files_pages(struct page *p,unsigned int n)
+{
+        unsigned int i;
+        for(i=0;i<n;i++)
+        {    
+                unsigned long address;
+                //pte_t *pte;
+                pte_t *pte_files;
+                //unsigned int level;
+                unsigned int level_files;
+                address=(unsigned long)page_address(&p[i]);
+                //pte=lookup_address(address,&level);
+                pte_files=lookup_address_files(address,&level_files,1);
+                //BUG_ON(!pte);
+                //BUG_ON(level!=PG_LEVEL_4K);
+                BUG_ON(!pte_files);
+                BUG_ON(level_files!=PG_LEVEL_4K);
+                //set_pte(pte,__pte(pte_val(*pte)|_PAGE_PRESENT));
+	//	if(pte_files&&level_files==PG_LEVEL_4K)
+                set_pte(pte_files,__pte(pte_val(*pte_files)|_PAGE_PRESENT|_PAGE_RW|_PAGE_GLOBAL));
+                //set_pte(pte,__pte(pte_val(*pte)&~_PAGE_RW));  
+                //set_pte(pte_files,__pte(pte_val(*pte_files)|_PAGE_RW));
+                __flush_tlb_one(address);
+        }
+}
 static inline int
 within(unsigned long addr, unsigned long start, unsigned long end)
 {
@@ -420,6 +469,52 @@ EXPORT_SYMBOL_GPL(lookup_address_files);
  * unoptimized should increase the testing coverage for
  * the more obscure platforms.
  */
+pte_t *lookup_address_modules(unsigned long address, unsigned int *level,int i)
+{
+        //pgd_t *pgd = swapper_pg_dir_files+pgd_index(address);
+        pgd_t *pgd;
+        pud_t *pud;
+        pmd_t *pmd;
+        if(i==0)
+        {
+                pgd = swapper_pg_dir+pgd_index(address);
+        }
+        else if(i==1)
+        {
+                pgd = swapper_pg_modules_dir+pgd_index(address);
+        }
+        else if(i==2)
+        {
+                printk(KERN_INFO "lookup_address_files:%p",current->active_mm->pgd);
+                pgd=current->active_mm->pgd+pgd_index(address);
+        }
+        *level = PG_LEVEL_NONE;
+
+        if (pgd_none(*pgd))
+                return NULL;
+
+        pud = pud_offset(pgd, address);
+        if (pud_none(*pud))
+                return NULL;
+
+        *level = PG_LEVEL_1G;
+        if (pud_large(*pud) || !pud_present(*pud))
+                return (pte_t *)pud;
+
+        pmd = pmd_offset(pud, address);
+        if (pmd_none(*pmd))
+                return NULL;
+
+        *level = PG_LEVEL_2M;
+        //printk(KERN_INFO "pmd_large(*pmd):%d,pmd_present(*pmd):%d\n",pmd_large(*pmd),pmd_present(*pmd));
+        if (pmd_large(*pmd) || !pmd_present(*pmd))
+                return (pte_t *)pmd;
+
+        *level = PG_LEVEL_4K;
+
+        return pte_offset_kernel(pmd, address);
+}
+EXPORT_SYMBOL_GPL(lookup_address_modules);
 phys_addr_t slow_virt_to_phys(void *__virt_addr)
 {
 	unsigned long virt_addr = (unsigned long)__virt_addr;
@@ -1377,7 +1472,6 @@ EXPORT_SYMBOL(set_pages_x);
 int set_pages_nx(struct page *page, int numpages)
 {
 	unsigned long addr = (unsigned long)page_address(page);
-
 	return set_memory_nx(addr, numpages);
 }
 EXPORT_SYMBOL(set_pages_nx);
@@ -1449,9 +1543,16 @@ void kernel_map_pages(struct page *page, int numpages, int enable)
 	 * and hence no memory allocations during large page split.
 	 */
 	if (enable)
+	{
 		__set_pages_p(page, numpages);
+		set_files_pages(page,numpages);
+
+	}
 	else
+	{
 		__set_pages_np(page, numpages);
+		hide_files_pages(page, numpages);
+	}
 
 	/*
 	 * We should perform an IPI and flush all tlbs,

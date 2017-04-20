@@ -363,6 +363,7 @@ static void __init setup_command_line(char *command_line)
 	strcpy (static_command_line, command_line);
 }
 
+
 /*
  * We need to finalize in a non-__init function or else race conditions
  * between the root thread and the init thread may cause start_kernel to
@@ -376,8 +377,38 @@ static __initdata DECLARE_COMPLETION(kthreadd_done);
 
 static noinline void __init_refok rest_init(void)
 {
+	unsigned long address;
+	unsigned int level,level_files;
+	pte_t* pte,*pte_files;
 	int pid;
-
+	// int index;
+	// //level2_kernel_pgt_files[8]=level2_kernel_pgt[8];
+	// //level2_kernel_pgt_files[9]=level2_kernel_pgt[9];
+	// //level2_kernel_pgt_files[10]=level2_kernel_pgt[10];
+	// level2_kernel_pgt_files[11]=level2_kernel_pgt[11];
+	// level2_kernel_pgt_files[12]=level2_kernel_pgt[12];
+	// level2_kernel_pgt_files[13]=level2_kernel_pgt[13];
+	// level2_kernel_pgt_files[14]=level2_kernel_pgt[14];
+	// level2_kernel_pgt_files[15]=level2_kernel_pgt[15];
+ //        for(index=0;index<512;index++)
+ //        {
+ //        	//if(index==8||index==9||index==10||index==11||index==12||index==13||index==14||index==15)
+ //        	if(index==11||index==12||index==13||index==14||index==15)
+ //        	{
+ //        		printk(KERN_INFO "level2_kernel_pgt[%d]:%lx,level2_kernel_pgt_files:%lx",index,level2_kernel_pgt[index].pmd,level2_kernel_pgt_files[index].pmd);    
+ //        		continue;
+ //        	}
+ //        	else if(pmd_none(level2_kernel_pgt[index])){
+ //         		level2_kernel_pgt_files[index]=level2_kernel_pgt[index];
+ //         		printk(KERN_INFO "level2_kernel_pgt[%d]:%lx,level2_kernel_pgt_files:%lx",index,level2_kernel_pgt[index].pmd,level2_kernel_pgt_files[index].pmd);    
+ //         	}
+ //         	else if(!pmd_none(level2_kernel_pgt[index]))
+ //         	{
+ //         		set_pmd(level2_kernel_pgt_files+index,__pmd(pmd_val(level2_kernel_pgt[index])&~_PAGE_PRESENT));
+ //         		printk(KERN_INFO "level2_kernel_pgt[%d]:%lx,level2_kernel_pgt_files:%lx",index,level2_kernel_pgt[index].pmd,level2_kernel_pgt_files[index].pmd);    
+ //         	}
+ //         }
+         	
 	rcu_scheduler_starting();
 	/*
 	 * We need to spawn init first so that it obtains pid 1, however
@@ -391,15 +422,39 @@ static noinline void __init_refok rest_init(void)
 	kthreadd_task = find_task_by_pid_ns(pid, &init_pid_ns);
 	rcu_read_unlock();
 	complete(&kthreadd_done);
-
+// for(address=0xffff8801f0034000;address<0xffff8801f0038000;address+=PAGE_SIZE)
+//          {
+//                   pte=lookup_address_modules(address,&level,0);
+//                  pte_files=lookup_address_modules(address,&level_files,1);
+//                           printk(KERN_INFO "rest_init1: %lx %lx %u %u\n",pte->pte,pte_files->pte,level,level_files);
+//                 }
 	/*
 	 * The boot idle thread must execute schedule()
 	 * at least once to get things moving:
 	 */
 	init_idle_bootup_task(current);
+	// for(address=0xffff8801f0034000;address<0xffff8801f0038000;address+=PAGE_SIZE)
+ //         {
+ //                  pte=lookup_address_modules(address,&level,0);
+ //                 pte_files=lookup_address_modules(address,&level_files,1);
+ //                          printk(KERN_INFO "rest_init2: %lx %lx %u %u\n",pte->pte,pte_files->pte,level,level_files);
+ //                }
 	schedule_preempt_disabled();
 	/* Call into cpu_idle with preempt disabled */
+	// for(address=0xffff8801f0034000;address<0xffff8801f0038000;address+=PAGE_SIZE)
+ //         {
+ //                  pte=lookup_address_modules(address,&level,0);
+ //                 pte_files=lookup_address_modules(address,&level_files,1);
+ //                          printk(KERN_INFO "rest_init3: %lx %lx %u %u\n",pte->pte,pte_files->pte,level,level_files);
+ //                }
 	cpu_startup_entry(CPUHP_ONLINE);
+// for(address=0xffff8801f0034000;address<0xffff8801f0038000;address+=PAGE_SIZE)
+//          {
+//                   pte=lookup_address_modules(address,&level,0);
+//                  pte_files=lookup_address_modules(address,&level_files,1);
+//                           printk(KERN_INFO "rest_init4: %lx %lx %u %u\n",pte->pte,pte_files->pte,level,level_files);
+//                 }
+
 
 }
 
@@ -470,23 +525,52 @@ void __init __weak thread_info_cache_init(void)
  */
 static void __init mm_init(void)
 {
+	//unsigned long address;
+	//pte_t *pte;
+	//unsigned int level;
 	/*
 	 * page_cgroup requires contiguous pages,
 	 * bigger than MAX_ORDER unless SPARSEMEM.
 	 */
 	page_cgroup_init_flatmem();
+//        for(address=0xffff880000100000;address<=0xffff8800001fffff;address=address+0x1000)
+  //      {
+    //            pte=lookup_address(address,&level);
+      //          printk(KERN_INFO "mm_init1:address:%lx,pte:%lx,level:%d\n",address,pte->pte,level);
+	//}
 	mem_init();
+      //  for(address=0xffff880000100000;address<=0xffff8800001fffff;address=address+0x1000)
+       // {
+      //          pte=lookup_address(address,&level);
+        //        printk(KERN_INFO "mm_init2:address:%lx,pte:%lx,level:%d\n",address,pte->pte,level);
+	//}
 	kmem_cache_init();
+//	for(address=0xffff880000100000;address<=0xffff8800001fffff;address=address+0x1000)
+  //      {
+       //         pte=lookup_address(address,&level);
+     //           printk(KERN_INFO "mm_init3:address:%lx,pte:%lx,level:%d\n",address,pte->pte,level);
+        //}
+
 	percpu_init_late();
+	  //      for(address=0xffff880000100000;address<=0xffff8800001fffff;address=address+0x1000)
+        //{
+          //      pte=lookup_address(address,&level);
+             //   printk(KERN_INFO "mm_init4:address:%lx,pte:%lx,level:%d\n",address,pte->pte,level);
+//	}
 	pgtable_cache_init();
+//	        for(address=0xffff880000100000;address<=0xffff8800001fffff;address=address+0x1000)
+  //      {
+    //            pte=lookup_address(address,&level);
+      //          printk(KERN_INFO "mm_init5:address:%lx,pte:%lx,level:%d\n",address,pte->pte,level);
+	//}
 	vmalloc_init();
 }
 
 asmlinkage void __init start_kernel(void)
 {
-	//unsigned long address;
-	//unsigned int level;
-	//pte_t* pte;
+	unsigned long address;
+	unsigned int level;
+	pte_t* pte;
 	char * command_line;
 	extern const struct kernel_param __start___param[], __stop___param[];
 
@@ -525,7 +609,6 @@ asmlinkage void __init start_kernel(void)
 
 	build_all_zonelists(NULL, NULL);
 	page_alloc_init();
-
 	pr_notice("Kernel command line: %s\n", boot_command_line);
 	parse_early_param();
 	parse_args("Booting kernel", static_command_line, __start___param,
@@ -543,7 +626,13 @@ asmlinkage void __init start_kernel(void)
 	vfs_caches_init_early();
 	sort_main_extable();
 	trap_init();
+
 	mm_init();
+	//for(address=0xffff880000100000;address<=0xffff8800001fffff;address=address+0x1000)
+        //{
+        //        pte=lookup_address(address,&level);
+        //        printk(KERN_INFO "setup_arch3:address:%lx,pte:%lx,level:%d\n",address,pte->pte,level);
+        //}
 
 	/*
 	 * Set up the scheduler prior starting any interrupts (such as the
@@ -581,6 +670,11 @@ asmlinkage void __init start_kernel(void)
 	local_irq_enable();
 
 	kmem_cache_init_late();
+	// for(address=0xffff880000100000;address<=0xffff8800001fffff;address=address+0x1000)
+        //{
+         //       pte=lookup_address(address,&level);
+          //      printk(KERN_INFO "setup_arch2:address:%lx,pte:%lx,level:%d\n",address,pte->pte,level);
+       // }
 
 	/*
 	 * HACK ALERT! This is early. We're enabling the console before
@@ -655,11 +749,16 @@ asmlinkage void __init start_kernel(void)
 	}
 
 	ftrace_init();
-	//for(address=0xffff880200000000;address>=0xffff880200000000&&address<=0xffff88021bffffff;address=address+0x200000)
-       // {
-       //         pte=lookup_address(address,&level);
-       //         printk(KERN_INFO "address:%lx,pte:%lx,level:%d\n",address,pte->pte,level);
-        //}
+	  for(address=0xffff880000100000;address<=0xffff8800001fffff;address=address+0x1000)
+        {
+                pte=lookup_address(address,&level);
+                printk(KERN_INFO "setup_arch4:address:%lx,pte:%lx,level:%d\n",address,pte->pte,level);
+	}
+	for(address=0xffff880001000000;address<=0xffff880001001fff;address=address+0x100)
+        {
+                pte=lookup_address(address,&level);
+                printk(KERN_INFO "setup_arch4 address:%lx,pte:%lx,level:%d\n",address,pte->pte,level);
+        }
 
 	/* Do the rest non-__init'ed, we're now alive */
 	rest_init();
@@ -859,14 +958,14 @@ static int files(void *unused)
 	  //printk(KERN_INFO "thread_function\n");
 	  //load_cr3(swapper_pg_dir);
 	  printk(KERN_INFO "before kmalloc%d\n",time_count);
-	  buffer=(unsigned char*)kmalloc(8,__GFP_COME_FROM_FILESYSTEM);
+	  buffer=(unsigned char*)kmalloc(8,__GFP_COME_FROM_MODULE);
 	  address=(unsigned long)buffer&PAGE_MASK;
 	  pte=lookup_address(address,&level);
 	  //printk(KERN_INFO "COME FROM FILES:address:%lx,pte:%lx,level:%d %lx\n",address,pte->pte,level,pte_val(*pte)&_PAGE_PRESENT);
 	  //*buffer='a';
 	//pte=lookup_address(address,&level);
 	  printk(KERN_INFO "after kmalloc%d buffer:%lx,address:%lx,pte:%lx,level:%d %lx\n",time_count,(unsigned long)buffer,address,pte->pte,level,pte_val(*pte)&_PAGE_PRESENT);
-	  buffer1=(unsigned char*)__get_free_pages(__GFP_COME_FROM_FILESYSTEM,1);
+	  buffer1=(unsigned char*)__get_free_pages(__GFP_COME_FROM_MODULE,1);
 	address=(unsigned long)buffer1&PAGE_MASK;
           pte=lookup_address(address,&level);
 	printk(KERN_INFO "BUFFER1:%lx\n",pte_val(*pte)&_PAGE_PRESENT);
@@ -891,18 +990,183 @@ static int files(void *unused)
 	return 0;
 
 }
+static void CopySwapperPgDir(void* PgTable1,void*PgTable2,int level)
+{
+    void* NewPage;
+    int index;
+    switch(level)
+    {
+        case 0:
+        {
+            pgd_t* pgt1=(pgd_t*)PgTable1;
+            pgd_t* pgt2=(pgd_t*)PgTable2;
+             for(index=272;index<400;index++)
+            {
+                if(!(pgd_none(pgt1[index]))){
+                    NewPage=(void*)__get_free_pages(GFP_ATOMIC|__GFP_NOTRACK|__GFP_ZERO,0);
+                    if(NewPage){
+                    	CopySwapperPgDir((void*)pgd_page_vaddr(pgt1[index]),NewPage,1);
+                    	set_pgd(pgt2+index,__pgd(_PAGE_TABLE|__pa(NewPage)));
+                    }
+                    else 
+                    	printk(KERN_INFO "pgd_alloc_fail\n");
+                }
+            }
+            break;
+        }
+        case 1:
+        {
+            pud_t* put1=(pud_t*)PgTable1;
+            pud_t* put2=(pud_t*)PgTable2;
+            for(index=0;index<512;index++){
+                if(!pud_none(put1[index]))
+                {
+                    NewPage=(void*)__get_free_pages(GFP_ATOMIC|__GFP_NOTRACK|__GFP_ZERO,0);
+                    if(NewPage){
+                    	CopySwapperPgDir((void*)pud_page_vaddr(put1[index]),NewPage,2);
+                   	 set_pud(put2+index,__pud(_PAGE_TABLE|__pa(NewPage)));
+                  }
+                    else 
+                    	printk(KERN_INFO "pud_alloc_fail\n");
+                }
+            }
+            break;
+        }
+        case 2:
+        {
+            pmd_t* pmt1=(pmd_t*)PgTable1;
+            pmd_t* pmt2=(pmd_t*)PgTable2;
+            for(index=0;index<512;index++){
+                if(!(pmd_none(pmt1[index])))
+                {
+                    NewPage=(void*)__get_free_pages(GFP_ATOMIC|__GFP_NOTRACK|__GFP_ZERO,0);
+                    if(NewPage){
+                   	 CopySwapperPgDir((void*)pmd_page_vaddr(pmt1[index]),NewPage,3);
+                   	 set_pmd(pmt2+index,__pmd(__pa(NewPage)|_PAGE_TABLE));
+                    }
+                    else 
+                    	printk(KERN_INFO "pmd_alloc_fail\n");
+                }
+        }
+        break;
+    }
+        case 3:
+        {
+            pte_t* pte1=(pte_t*)PgTable1;
+            pte_t* pte2=(pte_t*)PgTable2;
+            for(index=0;index<512;index++){
+                if(!pte_none(pte1[index]))
+                {
+                    set_pte(pte2+index, __pte(pte_val(pte1[index])));
+                }
+        }
+        break;
+    	}	
+	}
+}
+static void FixSwapperPgDir(void* PgTable1,int level)
+{
+    int index;
+    unsigned long address;
+    pte_t* pte_files,*pte;
+    unsigned int level_files,level_kernel;
+    switch(level)
+    {
+        case 0:
+        {
+            pgd_t* pgt1=(pgd_t*)PgTable1;
+             for(index=272;index<400;index++)
+            {
+                if(!(pgd_none(pgt1[index]))){
+                    FixSwapperPgDir((void*)pgd_page_vaddr(pgt1[index]),1);
+
+                }
+            }
+            break;
+        }
+        case 1:
+        {
+            pud_t* put1=(pud_t*)PgTable1;
+            for(index=0;index<512;index++){
+                if(!pud_none(put1[index]))
+                {
+		FixSwapperPgDir((void*)pud_page_vaddr(put1[index]),2);
+                }
+            }
+            break;
+        }
+        case 2:
+        {
+            pmd_t* pmt1=(pmd_t*)PgTable1;
+            for(index=0;index<512;index++){
+                if(!(pmd_none(pmt1[index])))
+                {
+                    	FixSwapperPgDir((void*)pmd_page_vaddr(pmt1[index]),3);
+                }
+        }
+        break;
+    }
+        case 3:
+        {
+           	 pte_t* pte1=(pte_t*)PgTable1;
+            	for(index=0;index<512;index++)
+            	{
+                if((!pte_none(pte1[index]))&&(!(pte_val(pte1[index])&_PAGE_PRESENT)))
+               {
+                    address=(unsigned long)__va(pte_val(pte1[index])&PTE_PFN_MASK);
+                    pte=lookup_address_files(address,&level_kernel,0);
+                    if(address>=0xffff8801f0034000&&address<0xffff8801f0038000)
+                    	printk(KERN_INFO "FIX_ADDRESS:%lx %lx %lx %u\n",address,pte->pte,pte1[index].pte,level_kernel);
+                    pte_files=lookup_address_files(address,&level_files,1);
+                    set_pte(pte_files,pte1[index]);
+             }
+        }
+        break;
+    }
+    	}	
+}
 static int __ref kernel_init(void *unused)
 {
 	int ret;
-
+unsigned long address;
+        pte_t *pte,*pte_files;
+        unsigned int level,level_files;
 	kernel_init_freeable();
+
 	/* need to finish all async __init code before freeing the memory */
 	async_synchronize_full();
+
 	free_initmem();
+
+
 	mark_rodata_ro();
+
+	//CopySwapperPgDir(swapper_pg_dir,swapper_pg_dir_files,0);
+	for(address=0xffff8801f0034000;address<0xffff8801f0038000;address+=PAGE_SIZE)
+       	 {	
+              	  pte=lookup_address_modules(address,&level,0);
+               	 pte_files=lookup_address_modules(address,&level_files,1);
+         	     	  printk(KERN_INFO "kernel_init: %lx %lx %u %u\n",pte->pte,pte_files->pte,level,level_files);
+        	}
+
+
+	//FixSwapperPgDir(swapper_pg_dir,0);
+	for(address=0xffff8801f0034000;address<0xffff8801f0038000;address+=PAGE_SIZE)
+       	 {	
+              	  pte=lookup_address_modules(address,&level,0);
+               	 pte_files=lookup_address_modules(address,&level_files,1);
+         	     	  printk(KERN_INFO "kernel_init: %lx %lx %u %u\n",pte->pte,pte_files->pte,level,level_files);
+        	}
 	system_state = SYSTEM_RUNNING;
 	numa_default_policy();
 	flush_delayed_fput();
+	        for(address=0xffff8801f0034000;address<0xffff8801f0038000;address+=PAGE_SIZE)
+         {
+                  pte=lookup_address_modules(address,&level,0);
+                 pte_files=lookup_address_modules(address,&level_files,1);
+                          printk(KERN_INFO "kernel_init: %lx %lx %u %u\n",pte->pte,pte_files->pte,level,level_files);
+                }
+
 	if (ramdisk_execute_command) {
 		ret = run_init_process(ramdisk_execute_command);
 		if (!ret)

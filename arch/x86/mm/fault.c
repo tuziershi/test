@@ -1026,13 +1026,14 @@ static void __kprobes
 __do_page_fault(struct pt_regs *regs, unsigned long error_code)
 {
 	unsigned int level;
-//	unsigned int level_files;
 	pte_t* pte;
-//	pte_t* pte_files;
+	unsigned int level_files;
+	pte_t* pte_files;
 	struct vm_area_struct *vma;
 	struct task_struct *tsk;
 	unsigned long address;
 	struct mm_struct *mm;
+	//unsigned long kmalloc_addr;
 	int fault;
 	unsigned int flags = FAULT_FLAG_ALLOW_RETRY | FAULT_FLAG_KILLABLE;
 
@@ -1072,35 +1073,48 @@ __do_page_fault(struct pt_regs *regs, unsigned long error_code)
 				return;
 			if (kmemcheck_fault(regs, address, error_code))
 				return;
-			printk(KERN_INFO "page fault1 for pte,address:%lx\n",address);
+			printk(KERN_INFO "page fault,address:%lx\n",address);
+			pte_files=lookup_address_modules(address,&level_files,1);
 			if(read_cr3()==__pa(swapper_pg_dir_files))
 			{
+				printk(KERN_INFO "__do_page_fault: page fault for kernel pagetable1, addr:%lx, pte:%lx\n",address,pte_files->pte);
 				load_cr3(current->active_mm->pgd);
-				 __flush_tlb_one(address);
+		//		//kmalloc_addr=(unsigned long)__kmalloc;
+		//		// pte_files=lookup_address_files(kmalloc_addr,&level_files,1);
+		//		//printk(KERN_INFO "__do_page_fault:kmalloc_addr:%lx,pte=%lx\n",kmalloc_addr,pte_files->pte);
+		//		//_flush_tlb_one(kmalloc_addr);
+				__flush_tlb_one(address);
 				return;
 			}
-			pte=lookup_address(address,&level);
-			if(!pte||!(pte_val(*pte)&_PAGE_PRESENT))
+			pte=lookup_address_modules(address,&level,0);
+			if(pte&&!(pte_val(*pte)&_PAGE_PRESENT))
 			{	
-				//set_pte(pte,__pte(pte_val(*pte)|_PAGE_PRESENT));
-				load_cr3(swapper_pg_dir_files);
+				printk(KERN_INFO "__do_page_fault: page fault for kernel pagetable2, addr:%lx, pte:%lx\n",address,pte->pte);
+				set_pte(pte,__pte(pte_val(*pte)|_PAGE_PRESENT));
+				//load_cr3(swapper_pg_dir_files);
+				//kmalloc_addr=(unsigned long)__kmalloc;
+				//pte=lookup_address(kmalloc_addr,&level);
+				//printk(KERN_INFO "__do_page_fault:kmalloc_addr:%lx,pte:%lx\n",kmalloc_addr,pte->pte);
+				//__flush_tlb_one(kmalloc_addr);
 				__flush_tlb_one(address);
 				//flush_tlb_all();
-			        printk(KERN_INFO "lookup_address\n");
+			        //printk(KERN_INFO "lookup_address\n");
 				return;
 			}
-			//pte_files=lookup_address_files(address,&level_files,1);
-			//if(!(pte_val(*pte_files)&_PAGE_PRESENT))
-			//{
-				//set_pte(pte_files,__pte(pte_val(*pte_files)|_PAGE_PRESENT));			
-			//load_cr3(current->active_mm->pgd);
-			//__flush_tlb_one(address);
-			//flush_tlb_all();
-			//printk(KERN_INFO "lookup_address_files\n");
-			//}
+			  pte_files=lookup_address_modules(address,&level_files,1);
+			  //if(pte_files&&!(pte_val(*pte_files)&_PAGE_PRESENT))
+			  //{
+			//	printk(KERN_INFO "__do_page_fault: page fault for swapper_pg_modules_dir, addr:%lx,pte:%lx\n",address,pte_files->pte);
+			  set_pte(pte_files,__pte(pte_val(*pte_files)|_PAGE_PRESENT));			
+				// //load_cr3(current->active_mm->pgd);
+			   __flush_tlb_one(address);
+				// //flush_tlb_all();
+			  	//printk(KERN_INFO "lookup_address_files\n");
+			  //	return;
+			  //}
 			//set_pte(pte,__pte(pte_val(*pte)|_PAGE_RW));
-			//load_cr3(current->active_mm->pgd);
-			//return;
+			load_cr3(current->active_mm->pgd);
+			return;
 			
 		}
 

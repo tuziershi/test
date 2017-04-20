@@ -382,6 +382,7 @@ static inline void update_page_count(int level, unsigned long pages) { }
  */
 extern pte_t *lookup_address(unsigned long address, unsigned int *level);
 extern pte_t *lookup_address_files(unsigned long address, unsigned int *level,int i);
+extern pte_t *lookup_address_modules(unsigned long address, unsigned int *level,int i);
 extern phys_addr_t slow_virt_to_phys(void *__address);
 
 #endif	/* !__ASSEMBLY__ */

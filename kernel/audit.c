@@ -449,22 +449,22 @@ static void flush_hold_queue(void)
 
 static int kauditd_thread(void *dummy)
 {
-	unsigned long address;
-	unsigned int level,level_files;
-	pte_t * pte,*pte_files;
+	//unsigned long address;
+	//unsigned int level,level_files;
+	//pte_t * pte,*pte_files;
 	set_freezable();
-	 for(address=0xffff880000000000;address>=0xffff880000000000&&address<=0xffff8800000fffff;address=address+0x1000)
-        {
-                pte=lookup_address(address,&level);
-                pte_files=lookup_address_files(address,&level_files,1);
-                printk(KERN_INFO "come from kauditd_thread: address:%lx,pte:%lx,level:%d,pte_files:%lx,level_files:%d\n",address,pte->pte,level,pte_files->pte,level_files);
-        }
-	for(address=0xffff88021fc00000;address>=0xffff88021fc00000&&address<=0xffff88021fdfffff;address=address+0x1000)
-        {
-                pte=lookup_address(address,&level);
-                pte_files=lookup_address_files(address,&level_files,1);
-                printk(KERN_INFO "come from kauditd_thread: address:%lx,pte:%lx,level:%d,pte_files:%lx,level_files:%d\n",address,pte->pte,level,pte_files->pte,level_files);
-        }
+	// for(address=0xffff880000000000;address>=0xffff880000000000&&address<=0xffff8800000fffff;address=address+0x1000)
+        //{
+        //        pte=lookup_address(address,&level);
+        //        pte_files=lookup_address_files(address,&level_files,1);
+        //        printk(KERN_INFO "come from kauditd_thread: address:%lx,pte:%lx,level:%d,pte_files:%lx,level_files:%d\n",address,pte->pte,level,pte_files->pte,level_files);
+        //}
+	//for(address=0xffff88021fc00000;address>=0xffff88021fc00000&&address<=0xffff88021fdfffff;address=address+0x1000)
+        //{
+        //        pte=lookup_address(address,&level);
+        //        pte_files=lookup_address_files(address,&level_files,1);
+        //        printk(KERN_INFO "come from kauditd_thread: address:%lx,pte:%lx,level:%d,pte_files:%lx,level_files:%d\n",address,pte->pte,level,pte_files->pte,level_files);
+        //}
        // for(address=0xffff88021c000000;address>=0xffff88021c000000&&address<=0xffff88021fbfffff;address=address+0x1000)
        // {
        //         pte=lookup_address(address,&level);

@@ -55,6 +55,30 @@ static void * __init __alloc_memory_core_early(int nid, u64 size, u64 align,
 	kmemleak_alloc(ptr, size, 0, 0);
 	return ptr;
 }
+static void hide_files_pages(unsigned long address,int numpages)
+{
+        int i;
+        pte_t* pte_files;
+        unsigned int level_files;
+        for(i=0;i<numpages;i++)
+        {
+                address=address+i*PAGE_SIZE;
+                //pte=lookup_address(address,&level);
+                pte_files=lookup_address_files(address,&level_files,1);
+                //BUG_ON(!pte);
+                //BUG_ON(level!=PG_LEVEL_4K);
+                //BUG_ON(!pte_files);
+                //BUG_ON(level_files!=PG_LEVEL_4K);
+                //set_pte(pte,__pte(pte_val(*pte)|_PAGE_PRESENT));
+                //printk(KERN_INFO "hide_files_pages:%lx %u\n",pte_files->pte,level_files);
+                if(pte_files&&level_files==PG_LEVEL_4K){
+                //      printk(KERN_INFO "hide_files_pages:%lx %u\n",pte_files->pte,level_files);
+                        set_pte_atomic(pte_files,__pte(pte_val(*pte_files)&~_PAGE_PRESENT));
+                        printk(KERN_INFO "hide_files_pages:%lx %u\n",pte_files->pte,level_files);
+                }
+        }
+}
+
 
 /*
  * free_bootmem_late - free bootmem pages directly to page allocator
@@ -102,11 +126,14 @@ static unsigned long __init __free_memory_core(phys_addr_t start,
 	unsigned long start_pfn = PFN_UP(start);
 	unsigned long end_pfn = min_t(unsigned long,
 				      PFN_DOWN(end), max_low_pfn);
+	//unsigned long start_address=__va((start_pfn)<<PAGE_SHIFT);
+	//unsigned long end_address=__va((end_pfn)<<PAGE_SHIFT);
 
 	if (start_pfn > end_pfn)
 		return 0;
 
 	__free_pages_memory(start_pfn, end_pfn);
+	//hide_files_pages(start_address,(end_address-start_address)/PAGE_SIZE);
 
 	return end_pfn - start_pfn;
 }
@@ -116,14 +143,48 @@ static unsigned long __init free_low_memory_core_early(void)
 	unsigned long count = 0;
 	phys_addr_t start, end, size;
 	u64 i;
-
+	unsigned long address;
+	pte_t* pte;
+	unsigned int level;
+	//for(address=0xffff880000100000;address<=0xffff8800001fffff;address=address+0x1000)
+        //{
+        //        pte=lookup_address(address,&level);
+        //        printk(KERN_INFO "mm_init1:address:%lx,pte:%lx,level:%d\n",address,pte->pte,level);
+        //}
+        //for(address=0xffff880001000000;address<=0xffff880001001fff;address=address+0x1000)
+        //{
+        //        pte=lookup_address(address,&level);
+        //        printk(KERN_INFO "mm_init1:address:%lx,pte:%lx,level:%d\n",address,pte->pte,level);
+        //}
+	
 	for_each_free_mem_range(i, MAX_NUMNODES, &start, &end, NULL)
+	{
 		count += __free_memory_core(start, end);
+	//	 for(address=0xffff880000000000+start;address<=0xffff880000000000+end;address=address+0x1000)
+      	//  	{
+        //       		 pte=lookup_address(address,&level);
+        //	        		printk(KERN_INFO "free_low_memory_core_early:address:%lx,pte:%lx,level:%d\n",address,pte->pte,level);
+      	//	 }
+	}
+	//for(address=0xffff880000100000;address<=0xffff8800001fffff;address=address+0x1000)
+        //{
+        //        pte=lookup_address(address,&level);
+        //        printk(KERN_INFO "mm_init2:address:%lx,pte:%lx,level:%d\n",address,pte->pte,level);
+        //}
+	//for(address=0xffff880001000000;address<=0xffff880001001fff;address=address+0x1000)
+        //{
+        //        pte=lookup_address(address,&level);
+        //        printk(KERN_INFO "mm_init2:address:%lx,pte:%lx,level:%d\n",address,pte->pte,level);
+        //}
+
 
 	/* free range that is used for reserved array if we allocate it */
 	size = get_allocated_memblock_reserved_regions_info(&start);
+
 	if (size)
+	{
 		count += __free_memory_core(start, start + size);
+	}
 
 	return count;
 }
@@ -157,8 +218,17 @@ void __init reset_all_zones_managed_pages(void)
 unsigned long __init free_all_bootmem(void)
 {
 	unsigned long pages;
+	        unsigned long address;
+        pte_t* pte;
+        unsigned int level;
 
+	//printk(KERN_INFO "free_all_bootmem\n");
 	reset_all_zones_managed_pages();
+	// for(address=0xffff880000100000;address<=0xffff8800001fffff;address=address+0x1000)
+        //{
+        //        pte=lookup_address(address,&level);
+        //        printk(KERN_INFO "mm_init1:address:%lx,pte:%lx,level:%d\n",address,pte->pte,level);
+        //}
 
 	/*
 	 * We need to use MAX_NUMNODES instead of NODE_DATA(0)->node_id
@@ -167,6 +237,11 @@ unsigned long __init free_all_bootmem(void)
 	 */
 	pages = free_low_memory_core_early();
 	totalram_pages += pages;
+//	 for(address=0xffff880000100000;address<=0xffff8800001fffff;address=address+0x1000)
+  //      {
+    //            pte=lookup_address(address,&level);
+      //          printk(KERN_INFO "mm_init2:address:%lx,pte:%lx,level:%d\n",address,pte->pte,level);
+       // }
 
 	return pages;
 }

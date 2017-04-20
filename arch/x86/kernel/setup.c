@@ -838,9 +838,9 @@ static void __init trim_low_memory_range(void)
 
 void __init setup_arch(char **cmdline_p)
 {
-	//unsigned long address;
-	//unsigned int level;
-	//pte_t* pte;
+	unsigned long address;
+	unsigned int level;
+	pte_t* pte;
 	memblock_reserve(__pa_symbol(_text),
 			 (unsigned long)__bss_stop - (unsigned long)_text);
 
@@ -1240,11 +1240,11 @@ void __init setup_arch(char **cmdline_p)
 		efi_unmap_memmap();
 	}
 #endif
-        //for(address=0xffff880200000000;address>=0xffff880200000000&&address<=0xffff88021bffffff;address=address+0x200000)
-        //{
-        //        pte=lookup_address(address,&level);
-        //        printk(KERN_INFO "address:%lx,pte:%lx,level:%d\n",address,pte->pte,level);
-       // }
+      //  for(address=0xffff880000100000;address<=0xffff8800001fffff;address=address+0x1000)
+       // {
+         //       pte=lookup_address(address,&level);
+           //     printk(KERN_INFO "setup_arch:address:%lx,pte:%lx,level:%d\n",address,pte->pte,level);
+        //}
 
 }
 

@@ -489,7 +489,7 @@ NEXT_PAGE(level3_kernel_pgt)
 NEXT_PAGE(level3_kernel_pgt_files)
         .fill   L3_START_KERNEL,8,0
         /* (2^48-(2*1024*1024*1024)-((2^39)*511))/(2^30) = 510 */
-        .quad   level2_kernel_pgt - __START_KERNEL_map + _KERNPG_TABLE
+        .quad   level2_kernel_pgt_files - __START_KERNEL_map + _KERNPG_TABLE
         .quad   level2_fixmap_pgt_files - __START_KERNEL_map + _PAGE_TABLE
 
 NEXT_PAGE(level2_kernel_pgt)
