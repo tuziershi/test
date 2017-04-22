@@ -73,8 +73,8 @@ struct vm_area_struct;
 //#define __GFP_COME_FROM_FILESYSTEM      ((__force gfp_t)___GFP_COME_FROM_FILESYSTEM)
 #define __GFP_COME_FROM_MODULE      ((__force gfp_t)___GFP_COME_FROM_MODULE)
 #define __GFP_COME_FROM_KERNEL	((__force gfp_t)___GFP_COME_FROM_KERNEL)
-#define __GFP_COME_FROM_SOURCE1 ((__force gfp_t)___GFP_COME_FROM_MODULE)
-#define __GFP_COME_FROM_SOURCE2 ((__force gfp_t)___GFP_COME_FROM_KERNEL)
+#define __GFP_COME_FROM_SOURCE1 ((__force gfp_t)___GFP_COME_FROM_KERNEL)
+#define __GFP_COME_FROM_SOURCE2 ((__force gfp_t)___GFP_COME_FROM_MODULE)
 #define __GFP_WAIT	((__force gfp_t)___GFP_WAIT)	/* Can wait and reschedule? */
 #define __GFP_HIGH	((__force gfp_t)___GFP_HIGH)	/* Should access emergency pools? */
 #define __GFP_IO	((__force gfp_t)___GFP_IO)	/* Can start physical IO? */

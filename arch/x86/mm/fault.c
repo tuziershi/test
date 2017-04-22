@@ -1077,7 +1077,7 @@ __do_page_fault(struct pt_regs *regs, unsigned long error_code)
 			pte_files=lookup_address_modules(address,&level_files,1);
 			if(read_cr3()==__pa(swapper_pg_dir_files))
 			{
-				printk(KERN_INFO "__do_page_fault: page fault for kernel pagetable1, addr:%lx, pte:%lx\n",address,pte_files->pte);
+				printk(KERN_INFO "__do_page_fault: page fault for kernel swapper_pg_dir_files, addr:%lx, pte:%lx\n",address,pte_files->pte);
 				load_cr3(current->active_mm->pgd);
 		//		//kmalloc_addr=(unsigned long)__kmalloc;
 		//		// pte_files=lookup_address_files(kmalloc_addr,&level_files,1);
@@ -1089,7 +1089,7 @@ __do_page_fault(struct pt_regs *regs, unsigned long error_code)
 			pte=lookup_address_modules(address,&level,0);
 			if(pte&&!(pte_val(*pte)&_PAGE_PRESENT))
 			{	
-				printk(KERN_INFO "__do_page_fault: page fault for kernel pagetable2, addr:%lx, pte:%lx\n",address,pte->pte);
+				printk(KERN_INFO "__do_page_fault: page fault for kernel swapper_pg_dir, addr:%lx, pte:%lx\n",address,pte->pte);
 				set_pte(pte,__pte(pte_val(*pte)|_PAGE_PRESENT));
 				//load_cr3(swapper_pg_dir_files);
 				//kmalloc_addr=(unsigned long)__kmalloc;

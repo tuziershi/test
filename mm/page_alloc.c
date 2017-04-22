@@ -2859,13 +2859,13 @@ out:
 		set_globally_invisible(page,1<<compound_order(page));    //设置全部内核态页表不可见；
 		if(gfp_mask & __GFP_COME_FROM_MODULE)
 		{
-			printk(KERN_INFO "come from __alloc_pages_nodemask,__GFP_COME_FROM_SOURCE1\n");   
+			printk(KERN_INFO "come from __alloc_pages_nodemask,__GFP_COME_FROM_SOURCE2\n");   
 			//set_kernel_pages(page,1<<compound_order(page));
 			set_files_pages(page,1<<compound_order(page));
 		}
 		if(gfp_mask & __GFP_COME_FROM_KERNEL)
 		{
-			printk(KERN_INFO "come from __alloc_pages_nodemask:__GFP_COME_FROM_SOURCE2\n");  
+			printk(KERN_INFO "come from __alloc_pages_nodemask:__GFP_COME_FROM_SOURCE1\n");  
 			//hide_kernel_pages(page,1<<compound_order(page));
 			set_kernel_pages(page,1<<compound_order(page));
 		}
