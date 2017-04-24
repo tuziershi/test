@@ -5477,7 +5477,7 @@ void __init mem_init_print_info(const char *str)
 	bss_size = __bss_stop - __bss_start;
 	init_data_size = __init_end - __init_begin;
 	init_code_size = _einittext - _sinittext;
-
+	printk(KERN_INFO "_text:%lx,_stext:%lx,_etext:%lx,__stop___ex_table%lx,_sdata:%lx,_edata:%lx,__start_rodata:%lx,__end_rodata:%lx,__bss_start:%lx,__bss_stop:%lx\n",_text,_stext,_etext,__stop___ex_table,_sdata,_edata,__start_rodata,__end_rodata,__bss_start,__bss_stop);
 	/*
 	 * Detect special cases and adjust section sizes accordingly:
 	 * 1) .init.* may be embedded into .data sections

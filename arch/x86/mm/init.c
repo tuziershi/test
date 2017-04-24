@@ -537,17 +537,17 @@ void __init init_mem_mapping(void)
 	unsigned long address;
         pte_t *pte,*pte_files;
         unsigned int level,level_files;
-	level2_kernel_pgt_files[8]=level2_kernel_pgt[8];
-	level2_kernel_pgt_files[9]=level2_kernel_pgt[9];
-	level2_kernel_pgt_files[10]=level2_kernel_pgt[10];
-	level2_kernel_pgt_files[11]=level2_kernel_pgt[11];
-	level2_kernel_pgt_files[12]=level2_kernel_pgt[12];
-	level2_kernel_pgt_files[13]=level2_kernel_pgt[13];
-	level2_kernel_pgt_files[14]=level2_kernel_pgt[14];
-	level2_kernel_pgt_files[15]=level2_kernel_pgt[15];
-        for(index=0;index<512;index++)
-        {
-		level2_kernel_pgt_files[index]=level2_kernel_pgt[index];
+	//level2_kernel_pgt_files[8]=level2_kernel_pgt[8];
+	//level2_kernel_pgt_files[9]=level2_kernel_pgt[9];
+	//level2_kernel_pgt_files[10]=level2_kernel_pgt[10];
+	//level2_kernel_pgt_files[11]=level2_kernel_pgt[11];
+	//level2_kernel_pgt_files[12]=level2_kernel_pgt[12];
+	//level2_kernel_pgt_files[13]=level2_kernel_pgt[13];
+	//level2_kernel_pgt_files[14]=level2_kernel_pgt[14];
+	//level2_kernel_pgt_files[15]=level2_kernel_pgt[15];
+        //for(index=0;index<512;index++)
+        //{
+	//	level2_kernel_pgt_files[index]=level2_kernel_pgt[index];
         	//if(index==8||index==9||index==10||index==11||index==12||index==13||index==14||index==15)
         	//if(index==8||index==11||index==12||index==13||index==14||index==15)
         	//{
@@ -564,7 +564,7 @@ void __init init_mem_mapping(void)
          		//printk(KERN_INFO "level2_kernel_pgt[%d]:%lx,level2_kernel_pgt_files:%lx",index,level2_kernel_pgt[index].pmd,level2_kernel_pgt_files[index].pmd);    
          	//}
          	
-        }
+        //}
 	for(index=0;index<512;index++)
 	{
 		printk(KERN_INFO "level3_ident_pgt[%d]:%lx",index,level3_ident_pgt[index].pud);

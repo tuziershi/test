@@ -465,9 +465,9 @@ NEXT_PAGE(init_level4_pgt)
 
 NEXT_PAGE(init_level4_pgt_files)
 	.quad   level3_ident_pgt - __START_KERNEL_map + _KERNPG_TABLE
-        .org    init_level4_pgt_files + L4_PAGE_OFFSET*8, 0
-        .quad   level3_ident_pgt - __START_KERNEL_map + _KERNPG_TABLE
-        .org    init_level4_pgt_files + L4_START_KERNEL*8, 0
+       	.org    init_level4_pgt_files + L4_PAGE_OFFSET*8, 0
+        	.quad   level3_ident_pgt - __START_KERNEL_map + _KERNPG_TABLE
+        	.org    init_level4_pgt_files + L4_START_KERNEL*8, 0
 	.quad   level3_kernel_pgt_files - __START_KERNEL_map + _PAGE_TABLE
 
 NEXT_PAGE(level3_ident_pgt)
@@ -517,8 +517,9 @@ NEXT_PAGE(level2_kernel_pgt_files)
 	 *  If you want to increase this then increase MODULES_VADDR
 	 *  too.)
 	 */
-	PMDS(0, __PAGE_KERNEL_LARGE_EXEC,
-		KERNEL_IMAGE_SIZE/PMD_SIZE)		
+	.fill 512,8,0
+	//PMDS(0, __PAGE_KERNEL_LARGE_EXEC,
+	//	KERNEL_IMAGE_SIZE/PMD_SIZE)		
 
 
 NEXT_PAGE(level2_fixmap_pgt)

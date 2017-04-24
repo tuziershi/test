@@ -1431,9 +1431,94 @@ void set_kernel_text_ro(void)
 	 */
 	set_memory_ro(start, (end - start) >> PAGE_SHIFT);
 }
+static void CopySwapperPgDir(void* PgTable1,void*PgTable2,int level)
+{
+    void* NewPage;
+    int index;
+    switch(level)
+    {
+        case 0:
+        {
+            pgd_t* pgt1=(pgd_t*)PgTable1;
+            pgd_t* pgt2=(pgd_t*)PgTable2;
+             for(index=272;index<400;index++)
+            {
+                if(!(pgd_none(pgt1[index]))){
+                    NewPage=(void*)__get_free_pages(GFP_ATOMIC|__GFP_NOTRACK|__GFP_ZERO,0);
+                    if(NewPage){
+                    	CopySwapperPgDir((void*)pgd_page_vaddr(pgt1[index]),NewPage,1);
+                    	set_pgd(pgt2+index,__pgd(_PAGE_TABLE|__pa(NewPage)));
+                    }
+                    else 
+                    	printk(KERN_INFO "pgd_alloc_fail\n");
+                }
+            }
+            break;
+        }
+        case 1:
+        {
+            pud_t* put1=(pud_t*)PgTable1;
+            pud_t* put2=(pud_t*)PgTable2;
+            for(index=0;index<512;index++){
+                if(!pud_none(put1[index]))
+                {
+                    NewPage=(void*)__get_free_pages(GFP_ATOMIC|__GFP_NOTRACK|__GFP_ZERO,0);
+                    if(NewPage){
+                    	CopySwapperPgDir((void*)pud_page_vaddr(put1[index]),NewPage,2);
+                   	 set_pud(put2+index,__pud(_PAGE_TABLE|__pa(NewPage)));
+                  }
+                    else 
+                    	printk(KERN_INFO "pud_alloc_fail\n");
+                }
+            }
+            break;
+        }
+        case 2:
+        {
+            pmd_t* pmt1=(pmd_t*)PgTable1;
+            pmd_t* pmt2=(pmd_t*)PgTable2;
+            for(index=0;index<512;index++){
+                if(!(pmd_none(pmt1[index])))
+                {
+			printk(KERN_INFO "pmt1[%d]:%lx\n",index,pmt1[index].pmd);
+			if(!pmd_large(pmt1[index])){
+                    		NewPage=(void*)__get_free_pages(GFP_ATOMIC|__GFP_NOTRACK|__GFP_ZERO,0);
+                    		if(NewPage){
+                   	 		CopySwapperPgDir((void*)pmd_page_vaddr(pmt1[index]),NewPage,3);
+                   	 		set_pmd(pmt2+index,__pmd(__pa(NewPage)|_PAGE_TABLE));
+                    		}
+                    		else 
+                    			printk(KERN_INFO "pmd_alloc_fail\n");
+				}
+			else
+			{
+				set_pmd(pmt2+index,__pmd(pmd_val(pmt1[index])));
+			}
+                }
+        }
+        break;
+    }
+        case 3:
+        {
+            pte_t* pte1=(pte_t*)PgTable1;
+            pte_t* pte2=(pte_t*)PgTable2;
+            for(index=0;index<512;index++){
+                if(!pte_none(pte1[index]))
+                {
+                    set_pte(pte2+index, __pte(pte_val(pte1[index])));
+                }
+        }
+        break;
+    	}	
+	}
+}
 
 void mark_rodata_ro(void)
 {
+        unsigned long address;
+        pte_t *pte,*another_pte;
+        unsigned int level,another_level;
+
 	unsigned long start = PFN_ALIGN(_text);
 	unsigned long rodata_start = PFN_ALIGN(__start_rodata);
 	unsigned long end = (unsigned long) &__end_rodata_hpage_align;
@@ -1469,6 +1554,22 @@ void mark_rodata_ro(void)
 	free_init_pages("unused kernel",
 			(unsigned long) __va(__pa_symbol(rodata_end)),
 			(unsigned long) __va(__pa_symbol(_sdata)));
+	CopySwapperPgDir(level2_kernel_pgt,level2_kernel_pgt_files,2);
+	for(address=0xffffffff80000000;address<0xffffffff9fffffff;address+=0x200000)
+        {
+                pte=lookup_address_modules(address,&level,0);
+                another_pte=lookup_address_modules(address,&another_level,1);
+                if(!pte&&!another_pte) continue;
+                if(pte)
+                        printk(KERN_INFO "make_rodata_ro:address:%lx pte:%lx level:%u\n",address,pte->pte,level);
+                else
+                        printk(KERN_INFO "make_rodata_ro:address:%lx pte is null\n",address);
+                if(another_pte)
+                        printk(KERN_INFO "make_rodata_ro:another_pte:%lx another_level:%u\n",another_pte->pte,another_level);
+                else
+                        printk(KERN_INFO "make_rodata_ro:another_pte is null\n");
+        }
+
 }
 
 #endif
