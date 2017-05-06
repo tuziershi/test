@@ -180,91 +180,91 @@ static void CopySwapperPgDir(void* PgTable1,void*PgTable2,int level)
 
 #ifndef CONFIG_DEBUG_RODATA
 static inline void mark_rodata_ro(void) { 
-	unsigned long start_text=PFN_ALIGN(_text);
-	unsigned long end_text=roundup((unsigned long)_etext,PAGE_SIZE);
-	unsigned long all_end=roundup((unsigned long)_brk_end,PAGE_SIZE);
-	unsigned long address=(unsigned long)start_text;
-	pte_t* pte;
-	unsigned int level;
+//	unsigned long start_text=PFN_ALIGN(_text);
+//	unsigned long end_text=roundup((unsigned long)_etext,PAGE_SIZE);
+//	unsigned long all_end=roundup((unsigned long)_brk_end,PAGE_SIZE);
+//	unsigned long address=(unsigned long)start_text;
+//	pte_t* pte;
+//	unsigned int level;
 	CopySwapperPgDir(level2_kernel_pgt, level2_kernel_pgt_files, 2);
-	while(address<end_text)
-	{
-		if(address>=0xffffffff81800000&&address<0xffffffff81afffff)
-		{
-			pte=lookup_address_modules(address,&level,1);
-			if(pte)
-			{
-				if(level==PG_LEVEL_2M)
-				{
-					address+=0x200000;
-				}
-				else if(level==PG_LEVEL_4K)
-				{
-					address+=0x1000;
-				}
-			}
-			else{
-				address+=0x1000;
-			}
-		}
-		else{
-			pte=lookup_address_modules(address,&level,1);
-			if(pte)
-			{
-				set_pte(pte,__pte(pte_val(*pte)&~_PAGE_PRESENT));
-				if(level==PG_LEVEL_2M)
-				{
-					address+=0x200000;
-				}
-				else if(level==PG_LEVEL_4K)
-				{
-					address+=0x1000;
-				}
-				}
-			else{
-				address+=0x1000;
-			}
-		}
-	}
-	while(address<all_end)
-	{
-		if(address>=0xffffffff81800000&&address<0xffffffff81afffff)
-		{
-			pte=lookup_address_modules(address,&level,1);
-			if(pte)
-			{
-				if(level==PG_LEVEL_2M)
-				{
-					address+=0x200000;
-				}
-				else if(level==PG_LEVEL_4K)
-				{
-					address+=0x1000;
-				}
-			}
-			else{
-				address+=0x1000;
-			}
-		}
-		else{
-			pte=lookup_address_modules(address,&level,1);
-			if(pte)
-			{
-				set_pte(pte,__pte(pte_val(*pte)&~_PAGE_RW));
-				if(level==PG_LEVEL_2M)
-				{
-					address+=0x200000;
-				}
-				else if(level==PG_LEVEL_4K)
-				{
-					address+=0x1000;
-				}
-			}
-			else{
-				address+=0x1000;
-			}
-		}
-	}
+//	while(address<end_text)
+//	{
+//		if(address>=0xffffffff81800000&&address<0xffffffff81afffff)
+//		{
+//			pte=lookup_address_modules(address,&level,1);
+//			if(pte)
+//			{
+//				if(level==PG_LEVEL_2M)
+//				{
+//					address+=0x200000;
+//				}
+//				else if(level==PG_LEVEL_4K)
+//				{
+//					address+=0x1000;
+//				}
+//			}
+//			else{
+//				address+=0x1000;
+//			}
+//		}
+//		else{
+//			pte=lookup_address_modules(address,&level,1);
+//			if(pte)
+//			{
+//				set_pte(pte,__pte(pte_val(*pte)&~_PAGE_PRESENT));
+//				if(level==PG_LEVEL_2M)
+//				{
+//					address+=0x200000;
+//				}
+//				else if(level==PG_LEVEL_4K)
+//				{
+//					address+=0x1000;
+//				}
+//				}
+//			else{
+//				address+=0x1000;
+//			}
+//		}
+//	}
+//	while(address<all_end)
+//	{
+//		if(address>=0xffffffff81800000&&address<0xffffffff81afffff)
+//		{
+//			pte=lookup_address_modules(address,&level,1);
+//			if(pte)
+//			{
+//				if(level==PG_LEVEL_2M)
+//				{
+//					address+=0x200000;
+//				}
+//				else if(level==PG_LEVEL_4K)
+//				{
+//					address+=0x1000;
+//				}
+//			}
+//			else{
+//				address+=0x1000;
+//			}
+//		}
+//		else{
+//			pte=lookup_address_modules(address,&level,1);
+//			if(pte)
+//			{
+//				set_pte(pte,__pte(pte_val(*pte)&~_PAGE_RW));
+//				if(level==PG_LEVEL_2M)
+//				{
+//					address+=0x200000;
+//				}
+//				else if(level==PG_LEVEL_4K)
+//				{
+//					address+=0x1000;
+//				}
+//			}
+//			else{
+//				address+=0x1000;
+//			}
+//		}
+//	}
 	
 }
 #endif

@@ -3129,11 +3129,12 @@ static int do_init_module(struct module *mod)
 {
 	int ret = 0;
 	int i;
-	//if(mod->name&&!strcmp(mod->name,"mydrive")){
-	//	level3_kernel_pgt_files[511]=level3_kernel_pgt[511];
+	if(mod->name&&!strcmp(mod->name,"mydrive")){
+		level2_fixmap_pgt_files[506]=level2_fixmap_pgt[506];
+		level2_fixmap_pgt_files[507]=level2_fixmap_pgt[507];
 
 	
-	//}		
+	}		
 	/*
 	 * We want ti find out whether @mod uses async during init.  Clear
 	 * PF_USED_ASYNC.  async_schedule*() will set it.
@@ -3165,22 +3166,22 @@ static int do_init_module(struct module *mod)
 	/* Start the module */
 	if (mod->init != NULL)
 	{
-		// if(mod->name&&!strcmp(mod->name,"mydrive"))
-		// {
+		 if(mod->name&&!strcmp(mod->name,"mydrive"))
+		 {
 		// 	//hide_kernel_pages((unsigned long)mod->module_init,mod->init_size);
 		// 	//hide_kernel_pages((unsigned long)mod->module_core,mod->core_size);
 		// 	//printk(KERN_INFO "load swapper_pg_modules_dir\n");
-		// 	load_cr3(swapper_pg_dir_files);
-		// 	__flush_tlb_all();
-		// }
+		 	load_cr3(swapper_pg_dir_files);
+		 	__flush_tlb_all();
+		 }
 
 		ret = do_one_initcall(mod->init);
-	// 	if(mod->name&&!strcmp(mod->name,"mydrive")&&read_cr3()==__pa(swapper_pg_dir_files))
- //        	{
- //                //	printk(KERN_INFO "load current->active_mm->pgd\n");
- //       	        	load_cr3(current->active_mm->pgd);
-	// 		__flush_tlb_all();
- //       		}
+	 	if(mod->name&&!strcmp(mod->name,"mydrive")&&read_cr3()==__pa(swapper_pg_dir_files))
+         	{
+                 	printk(KERN_INFO "load current->active_mm->pgd\n");
+        	        	load_cr3(current->active_mm->pgd);
+	 		__flush_tlb_all();
+        		}
 	}
 	if (ret < 0) {
 		/* Init routine failed: abort.  Try to protect us from
